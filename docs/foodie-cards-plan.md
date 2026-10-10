@@ -1,6 +1,6 @@
 # Foodie Cards — Hacklanta Build Plan
 
-> **For agentic workers:** Read the product brief and contracts in this file before implementing. Use `superpowers:executing-plans` when available to work task by task. Checkboxes track deliverables. Implementation starts with the Replit scaffold, then continues through the shared GitHub repository using external coding tools.
+> **For agentic workers:** Read the product brief, contracts, and team workflow in this file before implementing. Use `superpowers:executing-plans` when available to work task by task. Checkboxes track deliverables. One coordinating Codex agent builds Task 1 and the shared interfaces first; teammates then develop substantial feature lanes with their own coordinating agents and subagents. Use an existing Replit scaffold if available, or create the same mobile/backend foundation directly in the shared GitHub repository. Replit remains the backend host.
 
 **Goal:** Build a polished mobile food journal where accepted receipts create and evolve personal restaurant cards, increase account levels, and unlock badges and titles.
 
@@ -12,7 +12,7 @@
 
 **Prize priorities:** Creative track first, Best Use of Gemini API second, GoDaddy domain side quest third. No restaurant-owner dashboard, Photon agent, or Replit Small Business challenge in the initial scope. Replit is the initial build environment and backend host.
 
-**Status:** Ready for team review and Replit handoff. The numbers and technical defaults below are proposed implementation defaults, selected to remove ambiguity; they can be tuned after the complete flow works.
+**Status:** Planning baseline published at https://github.com/nnguyen402/foodie-cards. Ready for foundation implementation and team handoff; application implementation has not started. The numbers and technical defaults below are proposed implementation defaults, selected to remove ambiguity; they can be tuned after the complete flow works.
 
 ## 1. Product brief
 
@@ -260,16 +260,68 @@ Dates are `YYYY-MM-DD` as printed on the receipt; quantities are positive intege
 
 ## 5. Team ownership and build order
 
-Assign by strengths, not degree titles. These are four human work lanes; they do not require automated sub-agents.
+Assign by strengths, not degree titles. These are four human ownership lanes. Each teammate uses a coordinating agent and may delegate independent work to subagents within their lane. Build the foundation first, then split substantial feature work; do not wait for one agent to build the whole application and leave teammates only touch-ups.
 
 | Person | Owns | First deliverable |
 |---|---|---|
-| A — integrator/backend | Shared contracts, Supabase migrations/RLS, auth verification, transactional progression, deployment | Authenticated receipt submission persists and awards exactly once |
+| A — foundation/integration | Scaffold, auth, shared contracts, Supabase migrations/RLS, transactional receipt and review awards, deployment | Task 1 handoff first; then authenticated receipt submission persists and awards exactly once |
 | B — receipt/AI | Capture/upload, Gemini extraction, dish normalization, confirmation UI | One real receipt becomes an editable draft |
 | C — cards/visuals | Reusable card template, restaurant themes/photos, collection, detail, animations, haptics | A themed restaurant card opens smoothly on the demo phone |
-| D — profile/demo | Profile, ratings/reviews, badges/titles UI, sharing, demo preparation | A profile shows pinned cards and an equipped title |
+| D — profile/sharing | Profile, ratings/reviews UI and routes, pins, badges/titles UI, public previews, native sharing, demo preparation | A profile shows reviews, pinned cards, and an equipped title |
 
-All four agree on `shared/contracts.ts` first. A coordinates changes to it, database schema, and root dependencies. Others develop against fixtures matching the contracts until endpoints are ready. Integrate early rather than waiting for complete screens.
+### Foundation first and handoff gate
+
+One coordinating Codex agent, supervised by A, completes Task 1 plus the interfaces needed by the other lanes. If a runnable Replit scaffold already exists, extend it in this repository. Otherwise Codex creates the Expo/Express foundation here and documents how to host the backend on Replit. Do not create a competing repository or replace a working scaffold merely to rename directories.
+
+Spend the initial team kickoff agreeing on contracts, file ownership, and the demo phone. The foundation handoff requires:
+
+- Runnable mobile/backend scripts, Supabase email/password auth, persisted sessions, protected routes, an initial profile, committed schema/RLS/private-storage setup, and backend health connectivity.
+- Collection/scan/profile route shells and shared Zod/TypeScript receipt, progression, theme, and error contracts.
+- Explicit request/response contracts and ownership for profile edits, pins, title equipment, reviews, and reveal acknowledgement. Define these before their UI work starts; later feature endpoints need not be implemented during the foundation phase.
+- Clearly labeled contract-shaped fixtures for an empty account, receipt draft, first unlock, ordinary receipt, evolution, duplicate error, and reviewed/pinned card. Fixtures never award persisted progress.
+- Setup instructions, environment-variable examples without credentials, verification results, and a physical-phone smoke test. Each teammate can run the baseline and knows which files and interfaces they own. Any unavailable credentials or phone verification are reported as outstanding requirements, not claimed complete.
+
+Stop the foundation phase at this handoff. A continues transactional acceptance/progression while B, C, and D implement their lanes against the agreed fixtures. During foundation work, teammates gather permissioned restaurant assets and real receipt samples, select themes, and prepare the demo.
+
+### Shared ownership and change coordination
+
+All four agree on `shared/contracts.ts` first. A coordinates changes to it, database schema/migrations, root dependencies, and lockfiles. Other lanes propose required changes through A. A need not write every line, but reviews and integrates these shared changes before dependent work lands.
+
+A owns account XP, badges, titles, and transaction logic for both receipts and reviews. D owns review UI and the authenticated review route, which calls A's `save_review_and_award` function. Do not independently implement a second reward system. B owns extraction/confirmation; A owns acceptance validation and duplicate/progression persistence. C owns reveal presentation; A owns the authenticated reward-viewed route, using C's agreed event contract.
+
+### Agent and subagent workflow
+
+- Each teammate uses a separate checkout or worktree and a lane branch. Start from the same committed foundation baseline.
+- Each teammate's coordinating agent assigns subagents concrete deliverables, file boundaries, input/output contracts, and verification requirements, then reviews their combined work.
+- Subagents doing independent edits use isolated worktrees/branches where practical. Two agents must not edit the same files concurrently; the coordinator integrates their results.
+- Request shared-contract, schema, dependency, and lockfile changes through A. After an agreed contract update, update affected fixtures and notify dependent lanes before integrating their work.
+- Prefer small pull requests describing resulting behavior, verification results, and integration dependencies. A integrates frequently and keeps `main` runnable; teammates update from `main` before starting the next increment.
+- Keep credentials and real receipt images out of Git. Use labeled fixtures matching the same contracts as live responses.
+
+Suggested independent subagent assignments:
+
+| Lane | Possible subagent assignments |
+|---|---|
+| A | Pure XP helpers/tests; schema/RLS review; auth/session foundation |
+| B | Gemini extraction/normalization; capture/upload UI; confirmation editor |
+| C | Themes/card components; collection/detail; reveal animation/recovery |
+| D | Profile/pins/title UI; review UI/routes; public sharing previews |
+
+Assign specific files before dispatching these examples; they are not permission for overlapping edits. Keep schema mutations under A's coordination even when a subagent reviews them.
+
+Give every lane agent this instruction, followed by its exact assignment:
+
+> Read docs/foodie-cards-plan.md and the shared contracts. Implement only your assigned scope. Use the existing repository structure. Do not independently change shared contracts, database migrations, or root dependencies. Identify required changes for the integrator. Keep development fixtures clearly labeled. Report changed files, verification results, and integration dependencies. Coordinate subagents with explicit file ownership and review their combined result before handoff.
+
+### Integration checkpoints
+
+1. **Foundation:** A establishes auth, contracts, schema, setup instructions, and phone/backend connectivity; commit the shared handoff baseline.
+2. **Parallel lanes:** B, C, and D develop against agreed fixtures while A implements atomic acceptance/progression. Tasks 2–6 describe deliverables, not separate sequential assignments to people.
+3. **First live loop:** Connect B → A → C as soon as extraction, acceptance, and a basic reveal work. Prioritize a real receipt-to-first-card flow over completing an entire lane in isolation.
+4. **Profile loop:** Connect D's reviews/profile/sharing to persisted cards and A's transactional awards. C and D coordinate the review editor within card detail without editing the same route simultaneously.
+5. **Freeze:** Run the full physical-phone demo and failure cases together, then rehearse and submit.
+
+If A becomes overloaded, move isolated deployment documentation, demo preparation, or other non-conflicting work to a teammate so transactional rewards and integration can finish.
 
 ### Time allocation
 
@@ -291,14 +343,16 @@ Keep the team's **Sunday 8:00 a.m. internal cutoff**. The published Devpost curr
 
 **Interfaces:** Produces shared types, authenticated backend requests, and `GET /health` returning `{ ok: true }`. Supabase session identifies the user throughout later tasks.
 
-- [ ] Scaffold an Expo/TypeScript app and Express/TypeScript backend in Replit. Set up root scripts for mobile, server, type checking, and server tests.
-- [ ] Connect GitHub and commit the runnable scaffold. Export locally once to confirm external editing works without replacing the project's architecture.
+- [ ] Have A's coordinating Codex agent scaffold an Expo/TypeScript app and Express/TypeScript backend in the existing GitHub repository, or extend the existing Replit scaffold. Set up root scripts for mobile, server, type checking, and server tests. Preserve Replit backend hosting and the agreed architecture.
+- [ ] Commit the runnable scaffold to the existing GitHub repository. If starting in Replit, export locally once to confirm external editing works without replacing the project's architecture.
+- [ ] Agree on shared contracts and explicit profile-edit, pin, title-equipment, review, and reveal-acknowledgement interfaces. Establish lane/subagent file ownership and shared-change coordination before parallel feature work.
+- [ ] Add clearly labeled contract-shaped fixtures for receipt drafts, empty accounts, first unlocks, ordinary receipts, evolutions, duplicate errors, and reviewed/pinned cards. Include setup and handoff instructions so all teammates can run the baseline; do not implement later feature endpoints just to support fixtures.
 - [ ] Configure Supabase and server secrets. Document exact environment-variable names: mobile `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_API_URL`; server `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, `GEMINI_MODEL`.
 - [ ] Implement email/password sign-in, persisted sessions, profile creation, sign-out, and protected routes. Never display a previous user's cached collection after account switching.
 - [ ] Create initial schema, private receipt bucket, RLS, and curated restaurant seed. Record all changes in migrations.
 - [ ] Run `npm run typecheck` and `npx expo-doctor` in the mobile project. Expected: no unresolved type errors or dependency compatibility errors.
 - [ ] Open the app on the chosen physical demo phone. Confirm sign-in, relaunch persistence, sign-out, and backend connectivity. Resolve iPhone installation/account requirements now.
-- [ ] Verify user A cannot read user B's receipt files or private data. Commit this working foundation.
+- [ ] Verify user A cannot read user B's receipt files or private data. Commit this working foundation and report verification evidence, actual files, setup requirements, and unresolved blockers. Stop foundation work here and hand off B/C/D's feature lanes while A continues Task 3 and database review awards.
 
 ### Task 2 — Real receipt to editable confirmation
 
@@ -409,9 +463,9 @@ Cut in this order:
 
 Do not cut duplicate checks, persisted accounts/cards, confirmation, transactional rewards, error recovery, or a real receipt-to-card flow. Do not replace functioning features with unlabeled fake buttons.
 
-## 9. Initial Replit prompt
+## 9. Initial foundation prompt for Codex or Replit
 
-Copy this prompt into Replit after the team reviews the defaults above. Give Replit this entire document as the specification, but ask it to complete Task 1 before generating all later features.
+Give the coordinating Codex agent this entire document and the prompt below after team review. The same prompt can be used for a Replit scaffold if the team starts there. Complete Task 1 and the interface handoff before generating later features; continue in the existing GitHub repository.
 
 ```text
 Build the initial scaffold for Foodie Cards, an Expo React Native mobile app with TypeScript and Expo Router, plus a Node.js/Express TypeScript backend. This is a Hacklanta project; prioritize a runnable mobile flow and a coherent, polished interface.
@@ -420,7 +474,9 @@ Use Supabase exclusively for email/password authentication, PostgreSQL applicati
 
 Use one repository with mobile/, server/, shared/, supabase/migrations/, and docs/. Keep Gemini API calls, Supabase privileged credentials, receipt acceptance, and progression awards on the backend. Define shared Zod/TypeScript contracts before building features. The backend must derive the current user from a verified Supabase Bearer token.
 
-First complete Task 1 from the attached plan: runnable mobile/backend projects, Supabase setup and migrations, email/password sign-in, persistent session, initial profile, protected routes, collection/scan/profile tab shells, and a backend health endpoint. Connect GitHub and document required environment variables. Use fixture cards only as clearly identified UI development data; do not award fake progress.
+First complete Task 1 from the attached plan: runnable mobile/backend projects, Supabase setup and migrations, email/password sign-in, persistent session, initial profile, protected routes, collection/scan/profile tab shells, and a backend health endpoint. Work in the existing nnguyen402/foodie-cards repository, preserving an existing Replit scaffold if available. Document required environment variables and Replit backend setup. Use fixtures only as clearly identified UI development data; do not award fake progress.
+
+Prepare the foundation handoff described in section 5: shared Zod/TypeScript contracts; explicit interfaces for profile edits, pins, title equipment, reviews, and reveal acknowledgement; labeled fixtures for receipt drafts, empty accounts, first unlocks, ordinary receipts, evolutions, duplicate errors, and reviewed/pinned cards; and instructions for teammates to run their lanes. Later feature endpoints need not be implemented during this phase. Coordinate any subagents with explicit file ownership and isolated edits; review their combined results. The integrator owns shared contracts, migrations, root dependencies, lockfiles, and receipt/review award logic.
 
 The eventual flow is receipt photo -> Gemini extraction -> editable confirmation -> transactional acceptance -> first restaurant-card reveal or milestone evolution -> account XP, badges, titles, personal ratings/reviews, and profile sharing. Cards are personal, not tradable. Do not build owner dashboards, chatbots, social feeds, maps, payments, or AI-generated artwork.
 
@@ -428,7 +484,7 @@ For card visuals, use one reusable layout with a simple theme per restaurant: pr
 
 Use React Native Reanimated for milestone reveals when that task begins. Include empty, loading, retry, and error states. Never place server secrets in EXPO_PUBLIC variables. Never let the phone directly write XP or unlocks.
 
-Stop after Task 1 runs on a physical phone and the repository has a working committed baseline. Report actual files created, Supabase setup still required, verification results, and the commands to run mobile and backend locally so external coding tools can continue.
+Stop after Task 1 runs on a physical phone and the repository has a working committed baseline with agreed interfaces and fixtures. Report actual files created, Supabase setup still required, verification results, unresolved blockers, and the commands to run mobile and backend locally. Do not claim unavailable phone or service verification succeeded. Hand off substantial work to the receipt/AI, cards/visuals, and profile/sharing lanes; the foundation owner continues transactional progression and integration.
 ```
 
 ## 10. Official references

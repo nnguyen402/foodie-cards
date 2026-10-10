@@ -18,7 +18,9 @@ Planning baseline for the Hacklanta team. Application implementation has not sta
 
 ## First milestone
 
-Complete Task 1 of the build plan: a runnable scaffold, authenticated profile, Supabase setup, backend connectivity, and a verified physical-phone baseline. Continue from the Replit scaffold in this repository.
+Have one coordinating Codex agent complete Task 1 plus shared interfaces and labeled development fixtures: a runnable scaffold, authenticated profile, Supabase setup, backend connectivity, and a verified physical-phone baseline. Extend an existing Replit scaffold if available, or create the foundation in this repository with Replit backend hosting.
+
+Then hand off substantial receipt/AI, cards/visuals, and profile/sharing work to teammates and their agents. The foundation owner continues transactional progression and integration. Section 5 of the build plan defines ownership, subagent boundaries, and integration checkpoints.
 
 The live receipt-to-first-card flow takes priority. Rewards must be transactional and idempotent; receipts stay private; development fixtures must be clearly labeled.
 
