@@ -1,0 +1,30 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Dependencies and generated output
+node_modules/
+.expo/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+*.log
+
+# Local editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local agent worktrees
+.worktrees/
+worktrees/
+
+# Private receipt fixtures/uploads
+receipts-private/
+uploads/
