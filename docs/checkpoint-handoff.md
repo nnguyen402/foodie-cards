@@ -2,7 +2,7 @@
 
 ## Resume here
 
-Use the existing checkout at `C:\Documents\Projects\foodie-cards`, branch `feat/foundation`. Do not clone again or use `C:\Users\natha\foodie-cards`. The starting commit was `7856de3`; database foundation commit is `0bc85c4`, and mobile/API foundation checkpoint is `f7072aa`. This checkpoint stops at Task 1 of [the build plan](foodie-cards-plan.md); the physical iPhone gate is still pending. Changes are committed locally; nothing was pushed or merged.
+Use the existing checkout at `C:\Documents\Projects\foodie-cards`. Do not clone again or use `C:\Users\natha\foodie-cards`. The starting commit was `7856de3`; database foundation commit is `0bc85c4`, and mobile/API foundation checkpoint is `f7072aa`. This checkpoint stops at Task 1 of [the build plan](foodie-cards-plan.md); the physical iPhone gate is still pending. The user authorized merging and publishing the checkpoint to `main`; teammates should branch from the latest remote `main`. [Team workflow](team-workflow.md#assignments-to-start-now) contains the current assignments, deliverables, ownership boundaries, and dependencies.
 
 The user requested a Luna agent orchestrator for build, test, and review, using Superpowers and the Expo animation, design-system, and native-UI skills. All shell commands must start with `rtk`, per `C:\Users\natha\.codex\RTK.md`. Assign disjoint files before parallel work and preserve existing changes.
 

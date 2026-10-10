@@ -21,6 +21,23 @@ Stop at the committed foundation handoff, then give teammates substantial featur
 
 A owns account award logic for both receipts and reviews. D's review route calls the transactional database function rather than independently calculating rewards.
 
+## Assignments to start now
+
+The committed foundation is ready for parallel feature work: app shells, shared contracts and labeled fixtures, authenticated backend, hosted Supabase schema, and private storage are implemented. Read [the checkpoint handoff](checkpoint-handoff.md) for verification evidence and unresolved checks. Branch from the latest `main`; do not rebuild the scaffold. Lane letters are roles, not assigned teammate names.
+
+| Owner | Start now | First reviewable result | Boundary and dependencies |
+|---|---|---|---|
+| B: receipts/Gemini teammate | Task 2: capture/library upload, private draft handling, server-side Gemini extraction and normalization, editable confirmation | Three real receipt samples produce editable drafts; uncertain items remain flagged; retry/error states preserve edits | Own receipt extraction/normalization and receipt UI. No XP awards. A owns submission/acceptance. Verify configured Gemini access without exposing keys. |
+| C: cards/visuals teammate | Task 4: permissioned assets, five restaurant themes, one card layout with three stage treatments, collection/detail, reveal | Labeled fixtures demonstrate first unlock and evolution with skip/reduced-motion support on the iPhone | Own card features/assets and collection/detail/reveal screens. Connect persisted rewards after A's acceptance endpoint; coordinate review-editor placement with D. |
+| D: profile teammate | Task 5 UI: profile, rating/review editor, owned pins, badges, unlocked-title selection | Contract-shaped profile/editor states work with labeled fixtures, including zero-star versus unrated and save failures | Own profile features/screens and review UI. Coordinate card-detail edits with C. A supplies transactional review awards; sharing/public previews are a later increment after the receipt-to-card loop. |
+| A: user + integration coordinator | Task 3: atomic/idempotent acceptance, duplicate protection, server-side progression; phone-reachable backend deployment | An accepted receipt persists a card and correct XP exactly once; replay, cross-account duplicates, and concurrent submissions are tested | Own shared contracts, migrations, root dependencies/lockfile, receipt submission, receipt/review award logic, and integration. |
+
+Assign one person the remaining foundation QA immediately: real iPhone signup/email confirmation/sign-in, relaunch/session restoration, sign-out/account switch, empty collection, backend connectivity, and authenticated two-user private-data/storage isolation. Record evidence and failures in the checkpoint handoff. Feature work can proceed against contracts/fixtures while this runs; live integration depends on resolving failures.
+
+Each lane's first pull request should name changed files, include relevant tests/typecheck and phone evidence where applicable, and list outstanding integration dependencies. Keep fixtures explicitly labeled and outside live earned-progress flows. Do not commit credentials or real receipt files. Request shared-contract, migration, or dependency changes through A before editing them.
+
+If only two feature teammates are available, assign B and C first. A retains integration and foundation QA coordination; defer D until the first live receipt-to-card loop works. No owner should independently compute or write XP from the phone.
+
 ## Before parallel implementation
 
 1. Establish the runnable scaffold and scripts.
