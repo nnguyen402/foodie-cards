@@ -27,7 +27,7 @@ npm audit currently reports 29 advisories (11 moderate, 18 high), including Expo
 
 ## Supabase and local services
 
-The authorized hosted project is `hacklanta_2`, ref `pceralaksbvhilxxyjbs`, region `us-east-1`. The user supplied a scoped personal access token locally. `server/.env` contains the server URL and service-role key; `mobile/.env` contains the public URL/key and development backend address. `.env.supabase.local` holds the setup token and project ref. Never print or commit these values. Gemini variables remain blank.
+The authorized hosted project is `hacklanta_2`, ref `pceralaksbvhilxxyjbs`, region `us-east-1`. The user supplied a scoped personal access token locally. `server/.env` contains the server URL and service-role key; `mobile/.env` contains the public URL/key and development backend address. `.env.supabase.local` holds the setup token and project ref. Never print or commit these values. The user has populated GEMINI_MODEL and GEMINI_API_KEY in ignored server/.env; presence was verified without printing values. API connectivity and model access remain unverified.
 
 Hosted setup completed: the committed migration was applied atomically through the authorized Management API query endpoint, recording exact CLI-compatible version `20261010000100`, name `foodie_cards_foundation`, and 76 parsed statements. The four seed statements were applied without a seed migration row. The setup agent verified 15 application tables with RLS, 18 policies, catalog counts of 5 restaurants/15 menu items/8 badges/8 titles, and a private receipts bucket. Anonymous catalog REST returned 200; anonymous profiles/receipts REST returned 401. Migration metadata is inaccessible to anon/authenticated. Storage has four authenticated owner-folder policies and no anonymous policies; its ACL includes inherited SELECT, so privacy depends on RLS and the private bucket. Real authenticated two-user hosted tests remain pending. No hosted users or auth settings were changed.
 
@@ -37,12 +37,12 @@ The local Supabase stack and Docker were left running for QA. The integrator's M
 
 1. Complete the real iPhone gate in [foundation-handoff](foundation-handoff.md): signup/confirmation/sign-in, relaunch/session/profile, empty collection, backend health, sign-out/account switch, and private-data checks. Record failures and fix them before calling Task 1 a verified phone baseline.
 2. Review [setup](setup.md) and the hosted setup result below. Keep migration history aligned with local version `20261010000100`; never reset the hosted database.
-3. Implement Tasks 2 and 3 for the first real receipt-to-card loop: Gemini extraction, private upload, validated confirmation, and atomic/idempotent server-side acceptance and rewards. Configure Gemini and a phone-reachable backend deployment when this work starts.
+3. Implement Tasks 2 and 3 for the first real receipt-to-card loop: Gemini extraction, private upload, validated confirmation, and atomic/idempotent server-side acceptance and rewards. Verify the configured Gemini access and establish a phone-reachable backend deployment when this work starts.
 4. Continue card/reveal and profile/review/sharing lanes only against agreed shared contracts and persisted rewards. No client-calculated XP or unlabeled fixture data in live flows.
 
 The five seeded restaurants cannot yet demonstrate a three-cafe badge; expand verified catalog coverage when needed.
 
-For receipt extraction, the integrator recommends `GEMINI_MODEL=gemini-3.8-flash`, verified against [Google's current model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash) on 2026-10-10. It supports image/PDF input and structured output. This is a starting recommendation, not a receipt-accuracy benchmark: evaluate real samples, validate against the shared Zod schema, retain unknown values, and require confirmation before rewards. Gemini configuration and implementation remain pending.
+For receipt extraction, the integrator recommends `GEMINI_MODEL=gemini-3.8-flash`, verified against [Google's current model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash) on 2026-10-10. It supports image/PDF input and structured output. This is a starting recommendation, not a receipt-accuracy benchmark: evaluate real samples, validate against the shared Zod schema, retain unknown values, and require confirmation before rewards. Gemini credentials are configured locally; extraction implementation and receipt accuracy evaluation remain pending.
 
 ## References for agents
 
