@@ -2,7 +2,7 @@
 
 ## Resume here
 
-Use the existing checkout at `C:\Documents\Projects\foodie-cards`, branch `feat/foundation`. Do not clone again or use `C:\Users\natha\foodie-cards`. The starting commit was `7856de3`; database foundation commit is `0bc85c4`. This checkpoint stops at Task 1 of [the build plan](foodie-cards-plan.md); the physical iPhone gate is still pending.
+Use the existing checkout at `C:\Documents\Projects\foodie-cards`, branch `feat/foundation`. Do not clone again or use `C:\Users\natha\foodie-cards`. The starting commit was `7856de3`; database foundation commit is `0bc85c4`, and mobile/API foundation checkpoint is `f7072aa`. This checkpoint stops at Task 1 of [the build plan](foodie-cards-plan.md); the physical iPhone gate is still pending. Changes are committed locally; nothing was pushed or merged.
 
 The user requested a Luna agent orchestrator for build, test, and review, using Superpowers and the Expo animation, design-system, and native-UI skills. All shell commands must start with `rtk`, per `C:\Users\natha\.codex\RTK.md`. Assign disjoint files before parallel work and preserve existing changes.
 
@@ -28,6 +28,8 @@ npm audit currently reports 29 advisories (11 moderate, 18 high), including Expo
 ## Supabase and local services
 
 The authorized hosted project is `hacklanta_2`, ref `pceralaksbvhilxxyjbs`, region `us-east-1`. The user supplied a scoped personal access token locally. `server/.env` contains the server URL and service-role key; `mobile/.env` contains the public URL/key and development backend address. `.env.supabase.local` holds the setup token and project ref. Never print or commit these values. Gemini variables remain blank.
+
+Hosted setup completed: the committed migration was applied atomically through the authorized Management API query endpoint, recording exact CLI-compatible version `20261010000100`, name `foodie_cards_foundation`, and 76 parsed statements. The four seed statements were applied without a seed migration row. The setup agent verified 15 application tables with RLS, 18 policies, catalog counts of 5 restaurants/15 menu items/8 badges/8 titles, and a private receipts bucket. Anonymous catalog REST returned 200; anonymous profiles/receipts REST returned 401. Migration metadata is inaccessible to anon/authenticated. Storage has four authenticated owner-folder policies and no anonymous policies; its ACL includes inherited SELECT, so privacy depends on RLS and the private bucket. Real authenticated two-user hosted tests remain pending. No hosted users or auth settings were changed.
 
 The local Supabase stack and Docker were left running for QA. The integrator's Metro preview and tester's temporary backend were stopped. Start the backend with `npm run server` and Metro with `npm run mobile`; confirm the phone's backend URL matches the current computer LAN address. No Replit deployment exists yet.
 
