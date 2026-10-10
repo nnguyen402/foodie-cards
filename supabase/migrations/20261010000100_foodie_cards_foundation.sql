@@ -317,4 +317,3 @@ revoke all on storage.objects from public, anon;
 grant usage on schema storage to authenticated;
 grant select, insert, update, delete on storage.objects to authenticated;
 grant all on storage.objects to service_role;
-

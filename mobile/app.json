@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Foodie Cards",
+    "slug": "foodie-cards",
+    "scheme": "foodiecards",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F8F1E8"
+      }
+    }
+  }
+}

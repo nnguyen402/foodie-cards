@@ -1,0 +1,30 @@
+{
+  "name": "foodie-cards",
+  "private": true,
+  "engines": { "node": ">=22.6.0" },
+  "workspaces": [
+    "shared",
+    "server",
+    "mobile"
+  ],
+  "scripts": {
+    "mobile": "npm --workspace @foodie-cards/mobile run start",
+    "server": "npm --workspace @foodie-cards/server run dev",
+    "test": "vitest run",
+    "test:server": "vitest run server/tests",
+    "typecheck": "tsc --noEmit -p shared/tsconfig.json && tsc --noEmit -p server/tsconfig.json && npm --workspace @foodie-cards/mobile run typecheck",
+    "build": "npm run typecheck"
+  },
+  "devDependencies": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native-reanimated": "4.5.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.3.1",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

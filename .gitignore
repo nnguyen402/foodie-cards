@@ -9,6 +9,7 @@
 # Dependencies and generated output
 node_modules/
 .expo/
+.vitest/
 dist/
 build/
 coverage/
@@ -28,3 +29,4 @@ worktrees/
 # Private receipt fixtures/uploads
 receipts-private/
 uploads/
+node_modules
