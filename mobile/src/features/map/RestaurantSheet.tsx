@@ -3,11 +3,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 import { Text } from '@/components/ui/reusables/text';
 import { CuisineIcon } from '../cards/CuisineIcon';
+import { cuisineColors } from '../cards/cuisineArt';
 import { stageLabel } from '../cards/stageStyles';
 import { readableTextOn } from '../cards/themes';
 import { categoryLabel } from './labels';
 import { mapCardAvailability, type MapRestaurant } from './mapRestaurants';
-import { pinLook } from './pinStyle';
 
 // The preview that slides up when a token is tapped: a dark card above the tab bar.
 // Tapping the card itself opens the full card popup.
@@ -31,7 +31,7 @@ export function RestaurantSheet({ restaurant, distance, onOpenCard, onScan, onVi
   const reducedMotion = useReducedMotion();
   const { card, theme } = restaurant;
   const availability = mapCardAvailability(restaurant);
-  const look = pinLook(card?.stage ?? null);
+  const colors = cuisineColors(restaurant.cuisine);
   const details = [categoryLabel(restaurant.category), distance].filter(Boolean).join(' · ');
   const address = [restaurant.address, restaurant.neighbourhood].filter(Boolean).join(', ');
 
@@ -50,7 +50,7 @@ export function RestaurantSheet({ restaurant, distance, onOpenCard, onScan, onVi
           onPress={onOpenCard}
           className="flex-1 flex-row items-center gap-3 active:opacity-80"
         >
-          <View className="h-16 w-16 items-center justify-center overflow-hidden rounded-2xl" style={{ backgroundColor: theme.primaryColor, borderWidth: 2, borderColor: look.ring }}>
+          <View className="h-16 w-16 items-center justify-center overflow-hidden rounded-2xl" style={{ backgroundColor: theme.primaryColor, borderWidth: 2, borderColor: colors.ring }}>
             <View className="h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: theme.accentColor }}>
               <CuisineIcon kind={restaurant.icon} size={30} color={readableTextOn(theme.accentColor)} cutout={theme.accentColor} />
             </View>
@@ -59,8 +59,8 @@ export function RestaurantSheet({ restaurant, distance, onOpenCard, onScan, onVi
             <Text numberOfLines={1} className="text-lg font-extrabold" style={{ color: INK }}>{restaurant.name}</Text>
             <Text numberOfLines={1} className="text-sm font-medium" style={{ color: INK_MUTED }}>{details}</Text>
             {address ? <Text numberOfLines={1} className="text-xs font-medium" style={{ color: INK_MUTED }}>{address}</Text> : null}
-            <View className="self-start rounded-full px-2.5 py-0.5" style={{ backgroundColor: look.fill, borderWidth: 1.5, borderColor: look.ring }}>
-              <Text className="text-xs font-bold" style={{ color: look.ink }}>{card ? stageLabel(card.stage) : 'Not collected'}</Text>
+            <View className="self-start rounded-full px-2.5 py-0.5" style={{ backgroundColor: colors.fill, borderWidth: 1.5, borderColor: colors.ring }}>
+              <Text className="text-xs font-bold" style={{ color: colors.ink }}>{card ? stageLabel(card.stage) : 'Not collected'}</Text>
             </View>
           </View>
         </Pressable>

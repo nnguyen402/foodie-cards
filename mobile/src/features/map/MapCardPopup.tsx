@@ -6,7 +6,7 @@ import { Text } from '@/components/ui/reusables/text';
 import { RestaurantCard } from '../cards/RestaurantCard';
 import { stageLabel } from '../cards/stageStyles';
 import type { CardView } from '../cards/types';
-import { categoryLabel, flavourLine } from './labels';
+import { abilityLine, categoryLabel, flavourLine } from './labels';
 import { mapCardAvailability, type MapRestaurant } from './mapRestaurants';
 
 // The full card, shown over the map: our own stage frame with the restaurant's name, a
@@ -54,6 +54,7 @@ export function MapCardPopup({ restaurant, imageUrl, onScan, onViewCard, onClose
             {categoryLabel(restaurant.category)} · {card ? stageLabel(card.stage) : 'Not collected yet'}
           </Text>
           <Text className="text-center text-base font-medium italic" style={{ color: INK }}>{flavourLine(restaurant.category)}</Text>
+          <Text className="text-center text-sm font-bold" style={{ color: GOLD }}>{abilityLine(restaurant.cuisine)}</Text>
           {availability === 'unavailable' ? (
             <Text className="text-center text-sm font-semibold" style={{ color: INK_MUTED }}>Nearby listing only · no card is available for this restaurant.</Text>
           ) : null}

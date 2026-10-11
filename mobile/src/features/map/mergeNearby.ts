@@ -1,7 +1,8 @@
 import { distanceKm, type Coordinate } from './coordinates';
 import { inDiscoveryArea, type DiscoveryArea } from './discoveryArea';
 import { normalizedName, type MapRestaurant } from './mapRestaurants';
-import { osmIcon, type OsmPlace } from './osm';
+import { cuisineIconFor, cuisineKeyFor } from '../cards/cuisineArt';
+import type { OsmPlace } from './osm';
 
 export const MAX_VISIBLE_RESTAURANTS = 40;
 const SAME_PLACE_METRES = 150;
@@ -22,6 +23,8 @@ const brandKeyOf = (place: OsmPlace) => (place.brandWikidata ? `wikidata:${place
 function toPin(place: OsmPlace, owned: Map<string, MapRestaurant>): MapRestaurant {
   const matchedBrandKey = brandKeyOf(place);
   const brandOwner = owned.get(matchedBrandKey) ?? owned.get(nameKey(place));
+  const category = place.cuisine ?? place.amenity;
+  const cuisine = cuisineKeyFor({ name: place.name, category });
   return {
     id: place.key,
     source: 'osm',
@@ -32,8 +35,9 @@ function toPin(place: OsmPlace, owned: Map<string, MapRestaurant>): MapRestauran
     brandKey: brandOwner?.brandKey ?? matchedBrandKey,
     neighbourhood: place.city ?? '',
     address: place.address ?? '',
-    category: place.cuisine ?? place.amenity,
-    icon: osmIcon(place.cuisine, place.amenity),
+    category,
+    cuisine,
+    icon: cuisineIconFor(cuisine),
     // The brand's own look when it is collected, so every branch glows the same colour.
     theme: brandOwner?.theme ?? NEUTRAL_THEME,
     coordinate: place.coordinate,

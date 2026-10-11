@@ -57,14 +57,15 @@ describe('osmIcon', () => {
 
   it('falls back to coffee for a cafe and the plate otherwise', () => {
     expect(osmIcon(null, 'cafe')).toBe('coffee');
-    expect(osmIcon('vietnamese', 'restaurant')).toBe('plate');
+    expect(osmIcon('vietnamese', 'restaurant')).toBe('sushi');
+    expect(osmIcon('klingon', 'restaurant')).toBe('plate');
     expect(osmIcon(null, 'restaurant')).toBe('plate');
   });
 });
 
 const osmPlace = (id: number, name: string, metresNorth: number) => normalizeOsm({ elements: [element({ id, lat: north(metresNorth).latitude, tags: { amenity: 'restaurant', name } })] })[0];
 const seeded = (name: string, metresNorth: number): MapRestaurant => ({
-  id: `seed-${name}`, source: 'catalog', osm: null, name, brandKey: `name:${normalizedName(name)}`, neighbourhood: 'Town', address: '1 Main St', category: 'pizza', icon: 'pizza',
+  id: `seed-${name}`, source: 'catalog', osm: null, name, brandKey: `name:${normalizedName(name)}`, neighbourhood: 'Town', address: '1 Main St', category: 'pizza', cuisine: 'pizza', icon: 'pizza',
   theme: { primaryColor: '#000000', accentColor: '#ffffff', fontKey: 'bold', patternKey: 'none' } as MapRestaurant['theme'], coordinate: north(metresNorth), card: null,
 });
 

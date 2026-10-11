@@ -4,6 +4,8 @@ import { AppText } from '@/components/ui/app-text';
 import { MessagePanel } from '@/components/ui/message-panel';
 import { formatCalendarDate } from '@/features/cards/detail';
 import { RestaurantCard } from '@/features/cards/RestaurantCard';
+import { cuisineKeyFor } from '@/features/cards/cuisineArt';
+import { abilityLine } from '@/features/map/labels';
 import { nextStageGoal, stageLabel } from '@/features/cards/stageStyles';
 import { ratingLabel } from '@/features/cards/themes';
 import { useCardDetail } from '@/features/cards/useCardDetail';
@@ -60,6 +62,10 @@ export default function CardDetailScreen() {
     content = (
       <>
         <View style={styles.cardWrap}><RestaurantCard card={card} width={cardWidth} /></View>
+        <View style={styles.rarity}>
+          <AppText strong>{stageLabel(card.stage)}</AppText>
+          <AppText variant="small" muted>{abilityLine(cuisineKeyFor(card.restaurant))}</AppText>
+        </View>
 
         <Section title="Progress">
           {goal ? (
@@ -131,6 +137,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.canvas },
   content: { padding: spacing.page, paddingBottom: spacing.xxl, gap: spacing.xl },
   cardWrap: { alignItems: 'center' },
+  rarity: { alignItems: 'center', gap: 2 },
   section: { gap: spacing.sm },
   sectionTitle: { paddingHorizontal: spacing.lg },
   group: { backgroundColor: colors.surface, borderRadius: radius.control, overflow: 'hidden' },

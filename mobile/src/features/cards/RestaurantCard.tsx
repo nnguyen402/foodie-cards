@@ -3,11 +3,12 @@ import { Image, StyleSheet, Text, View, type ImageSourcePropType, type StyleProp
 import { CardFrame } from './CardFrame';
 import { CardPattern } from './CardPattern';
 import { CuisineIcon } from './CuisineIcon';
+import { cuisineIconFor, cuisineKeyFor, getCuisineArt } from './cuisineArt';
 import { nameFont } from './fonts';
 import { frameRects, type WindowRect } from './frameLayout';
 import { describeProgress } from './progress';
 import { stageLabel } from './stageStyles';
-import { cardInk, cuisineIcon, ratingLabel, ratingSpoken, readableTextOn } from './themes';
+import { cardInk, ratingLabel, ratingSpoken, readableTextOn } from './themes';
 import type { CardView } from './types';
 
 // Below this width the card is a collection thumbnail and shows only the essentials.
@@ -35,6 +36,8 @@ function windowStyle(box: WindowRect, backgroundColor: string): ViewStyle {
 export function RestaurantCard({ card, width, heroSource, uncollected = false, style }: RestaurantCardProps) {
   const rects = useMemo(() => frameRects(width), [width]);
   const { restaurant } = card;
+  const cuisine = cuisineKeyFor(restaurant);
+  const cuisineArt = getCuisineArt(cuisine);
   const { theme } = restaurant;
   const compact = width < COMPACT_BELOW;
   const px = (value: number) => value * rects.scale;
@@ -73,7 +76,11 @@ export function RestaurantCard({ card, width, heroSource, uncollected = false, s
           <>
             <CardPattern patternKey={theme.patternKey} color={theme.accentColor} width={rects.art.w} height={rects.art.h} scale={rects.scale} />
             <View style={[styles.centered, { width: px(300), height: px(300), borderRadius: px(150), backgroundColor: theme.accentColor }]}>
-              <CuisineIcon kind={cuisineIcon(restaurant.category)} size={px(190)} color={onAccent} cutout={theme.accentColor} />
+              {cuisineArt ? (
+                <Image source={cuisineArt} resizeMode="contain" style={{ width: px(260), height: px(260) }} accessibilityIgnoresInvertColors />
+              ) : (
+                <CuisineIcon kind={cuisineIconFor(cuisine)} size={px(190)} color={onAccent} cutout={theme.accentColor} />
+              )}
             </View>
           </>
         )}

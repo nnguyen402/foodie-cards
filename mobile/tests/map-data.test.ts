@@ -118,14 +118,14 @@ describe('buildMapRestaurants', () => {
 
 describe('pin look', () => {
   it('uses silver, gold and purple-gold for the three stages', () => {
-    expect(pinLook('discovered').ring).toBe('#c9d1dc');
-    expect(pinLook('regular').ring).toBe('#f2b632');
-    expect(pinLook('house_favorite')).toMatchObject({ ring: '#f5c542', glow: '#a45cff', sparkle: true });
+    expect(pinLook('discovered').glow).toBe('#c9d1dc');
+    expect(pinLook('regular').glow).toBe('#f2b632');
+    expect(pinLook('house_favorite')).toMatchObject({ glow: '#a45cff', sparkle: true });
   });
 
   it('dims a locked pin and gives it no glow', () => {
     expect(pinLook(null)).toMatchObject({ glow: null, locked: true, sparkle: false });
-    expect(pinLook(null).opacity).toBeLessThan(1);
+    expect(pinLook(null).opacity).toBe(0.55);
   });
 });
 
@@ -165,11 +165,11 @@ describe('pin motion', () => {
 
 describe('hud', () => {
   it('shows progress through the current level of 200 XP', () => {
-    expect(hudProgress({ accountXP: 350, accountLevel: 2 }, 2, 5)).toEqual({ level: 2, xpIntoLevel: 150, xpPerLevel: 200, fraction: 0.75, xpLabel: '150 / 200 XP', discoveredLabel: '2 / 5 discovered' });
+    expect(hudProgress({ accountXP: 350, accountLevel: 2 }, 2, 5)).toEqual({ level: 2, xpIntoLevel: 150, xpPerLevel: 200, fraction: 0.75, xpLabel: 'Lv 2 · 350 XP · 150/200 to Lv 3', discoveredLabel: '2 / 5 discovered' });
   });
 
   it('starts empty for a new account', () => {
-    expect(hudProgress({ accountXP: 0, accountLevel: 1 }, 0, 5)).toMatchObject({ level: 1, fraction: 0, xpLabel: '0 / 200 XP', discoveredLabel: '0 / 5 discovered' });
+    expect(hudProgress({ accountXP: 0, accountLevel: 1 }, 0, 5)).toMatchObject({ level: 1, fraction: 0, xpLabel: 'Lv 1 · 0 XP · 0/200 to Lv 2', discoveredLabel: '0 / 5 discovered' });
   });
 });
 

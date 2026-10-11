@@ -9,7 +9,7 @@ export function hudProgress(profile: { accountXP: number; accountLevel: number }
     xpIntoLevel,
     xpPerLevel: XP_PER_LEVEL,
     fraction: xpIntoLevel / XP_PER_LEVEL,
-    xpLabel: `${xpIntoLevel} / ${XP_PER_LEVEL} XP`,
+    xpLabel: `Lv ${profile.accountLevel} · ${profile.accountXP} XP · ${xpIntoLevel}/${XP_PER_LEVEL} to Lv ${profile.accountLevel + 1}`,
     discoveredLabel: `${discovered} / ${total} discovered`,
   };
 }
