@@ -121,7 +121,7 @@ Ratings are 0–5 in half-star increments; zero is valid and null means unrated.
 
 ## 8. Trust, privacy, and reliability
 
-Supabase owns accounts, PostgreSQL data, and private receipt storage. Expo is the mobile client; the TypeScript/Express backend calls Gemini and verifies Supabase bearer tokens. Replit remains the planned backend host. Gemini and Supabase service-role keys stay server-side.
+Supabase owns accounts, PostgreSQL data, and private receipt storage. Expo is the mobile client; the TypeScript/Express backend calls Gemini and verifies Supabase bearer tokens. Replit is excluded from this workflow; use the existing Express backend. Gemini and Supabase service-role keys stay server-side.
 
 Receipt acceptance and receipt/review rewards are atomic and idempotent. Clients cannot directly award XP, stages, badges, or titles. Concurrent submissions must not double-award a receipt, new item, stage, or badge. Failed transactions leave no partial progress. Unknown or foreign-owned drafts fail safely.
 
@@ -131,12 +131,14 @@ Exercise offline upload, AI timeout, denied camera permission, duplicate receipt
 
 ## 9. Team ownership and delivery order
 
+Current assignment: the project owner takes **A**, one teammate takes **B + C**, and one teammate takes **D**. B and C remain separate responsibility lanes under the same person.
+
 | Lane | Immediate assignment | First deliverable |
 |---|---|---|
 | A: integration owner | Transactional acceptance/progression, duplicate protection, receipt/review awards, deployment, shared contracts/migrations/dependencies | Real receipt creates persisted card/XP exactly once, with replay/concurrency tests |
 | B: receipts/AI | Capture/upload, Gemini extraction, normalization, editable confirmation | Three real receipts produce valid editable drafts with uncertainty/error recovery |
 | C: design/cards | Visual direction, restaurant assets/themes, reusable card, collection/detail, reveal | Team-reviewed collection/card design, then first-unlock/evolution fixtures on iPhone |
-| D: profile/sharing | Profile, rating/review UI/routes, pins, titles; sharing after core loop | Contract-shaped profile/editor states, followed by persisted data and transactional review awards |
+| D: profile/sharing | Profile, rating/review mobile UI, pins, titles; sharing after core loop | Contract-shaped profile/editor states, followed by persisted data and transactional review awards |
 
 Assign a foundation-QA owner immediately for iPhone signup/confirmation/sign-in/relaunch/sign-out/account switch, backend access, and authenticated two-user privacy checks. B/C/D can work against agreed contracts and labeled fixtures while QA and A proceed. First connect B → A → C; then integrate D. With two feature teammates, prioritize B and C.
 
@@ -144,9 +146,9 @@ Each owner branches from current `main`, uses explicit file ownership, and submi
 
 ## 10. Current state and release gate
 
-Implemented: Expo authentication/tab shells, reusable basic UI/theme, Express health/authenticated profile APIs, shared Zod contracts/labeled fixtures, hosted Supabase schema/private storage/catalog. Automated foundation checks passed; actual phone auth/session checks and authenticated two-user hosted tests remain pending. Gemini variables are configured locally; model/API access and extraction accuracy remain unverified. Replit deployment and completed visual design are pending.
+Implemented: Expo authentication/tab shells, reusable basic UI/theme, Express health/authenticated profile APIs, shared Zod contracts/labeled fixtures, hosted Supabase schema/private storage/catalog. Automated foundation checks passed; actual phone auth/session checks and authenticated two-user hosted tests remain pending. Gemini variables are configured locally; model/API access and extraction accuracy remain unverified. Public backend deployment and completed visual design are pending.
 
-Do not treat defined contracts as implemented endpoints. Receipt extraction, atomic rewards, final card/reveal UI, full profile/reviews/titles, and sharing remain feature work. [Checkpoint handoff](checkpoint-handoff.md) records detailed evidence and limitations.
+Do not treat defined contracts as implemented endpoints. Lane A's feature branch implements atomic rewards, review/profile APIs, and reveal recovery with local verification. Receipt extraction, final card/reveal UI, full profile UI, and sharing remain feature work. [Checkpoint handoff](checkpoint-handoff.md) records branch, deployment evidence, and limitations.
 
 Before demo release: run applicable tests/typecheck/Expo Doctor, exercise the complete flow on a fresh account against the published backend, verify recovery/privacy, rehearse a 60–90 second pitch, and prepare a video/screenshots backup. Include at least one real receipt extraction; historical sample receipts may demonstrate later visit dates only when clearly labeled. Freeze features with at least 15% of the remaining time for verification/rehearsal.
 

@@ -1,6 +1,6 @@
 # Foundation handoff
 
-This milestone implements Task 1 of [the build plan](foodie-cards-plan.md). It establishes accounts, private data boundaries, shared contracts, mobile route shells, and backend connectivity. Receipt extraction, acceptance, progression, card reveals, review awards, and public sharing belong to later tasks.
+This milestone implements Task 1 of [the build plan](foodie-cards-plan.md). It establishes accounts, private data boundaries, shared contracts, mobile route shells, and backend connectivity. Receipt extraction, acceptance, progression, card reveals, review awards, and public sharing belong to later tasks. See the [Lane A handoff](lane-a-handoff.md) for the subsequent transactional backend interfaces; A owns those server routes while D owns their mobile presentation.
 
 ## Ownership
 
@@ -9,7 +9,7 @@ This milestone implements Task 1 of [the build plan](foodie-cards-plan.md). It e
 | A: integrator | Root packages/lockfile, `shared/`, `supabase/`, server auth and award transactions | Approves shared interface, schema, and dependency changes. |
 | B: receipts/AI | `server/src/receipts/`, `mobile/src/features/receipts/`, receipt confirmation | Produces a validated draft; submits confirmation to A's acceptance API. |
 | C: cards | `mobile/src/features/cards/`, collection/detail/reveal routes and prepared assets | Presents persisted rewards; acknowledges completed or skipped reveal events. |
-| D: profile/sharing | Profile UI, review UI/routes, public preview pages | Calls A's review award transaction; never calculates rewards independently. |
+| D: profile/sharing | Profile UI, review mobile UI, public preview pages | Calls A's review award transaction; never calculates rewards independently. |
 
 Assign exact files before parallel edits. Keep independent work on lane branches. Coordinate changes to shared contracts and migrations through A. Do not edit another lane's route while they are working in it.
 

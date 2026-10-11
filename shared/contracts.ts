@@ -81,6 +81,12 @@ export const progressionResultSchema = z.object({
   cardXP: z.number().int().nonnegative(),
   visitCount: z.number().int().nonnegative(),
   stage: restaurantStageSchema,
+  // Additive: older labeled fixtures may omit it; live acceptance lists every
+  // newly crossed milestone even when only the highest card is revealed.
+  stageAwards: z.array(z.object({
+    stage: restaurantStageSchema,
+    accountXP: z.number().int().nonnegative(),
+  })).optional(),
   accountXP: z.number().int().nonnegative(),
   accountLevel: z.number().int().positive(),
   newBadges: z.array(z.string()),

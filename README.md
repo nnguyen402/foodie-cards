@@ -4,7 +4,7 @@ A mobile dining journal where confirmed receipts unlock and evolve personal rest
 
 ## Project status
 
-The foundation code checkpoint includes Expo mobile authentication and native tab shells, an Express backend, shared validated contracts, and a Supabase schema with private storage and access rules. Real iPhone authentication checks remain pending. Receipt extraction and reward progression are the next milestone. This baseline does not award fixture progress.
+The foundation includes Expo authentication/tab shells, Express, shared contracts, and private Supabase data/storage. The `feat/lane-a-progression` branch adds transactional receipt/review rewards, profile actions, and reveal recovery; see the checkpoint for verification and rollout status. Real receipt extraction and iPhone integration remain pending. Development fixtures do not award live progress.
 
 - [Product requirements document — start here](docs/PRD.md)
 - [Full build plan and product rules](docs/foodie-cards-plan.md)
@@ -12,12 +12,13 @@ The foundation code checkpoint includes Expo mobile authentication and native ta
 - [Shared mobile UI setup and teammate guidance](docs/ui-foundation.md)
 - [Local setup, Supabase configuration, and iPhone checks](docs/setup.md)
 - [Foundation interfaces and lane handoff](docs/foundation-handoff.md)
+- [Lane A backend interfaces for B+C and D](docs/lane-a-handoff.md)
 - [Checkpoint status and next-agent handoff](docs/checkpoint-handoff.md)
 
 ## Planned architecture
 
 - Expo / React Native / TypeScript mobile app with Expo Router.
-- TypeScript / Express backend hosted on Replit, calling Gemini for receipt extraction.
+- TypeScript / Express backend in the existing checkout, calling Gemini for receipt extraction.
 - Supabase exclusively for authentication, PostgreSQL application data, and private receipt storage.
 - Shared Zod / TypeScript contracts and committed database migrations.
 
