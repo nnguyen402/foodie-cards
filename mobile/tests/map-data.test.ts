@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ATLANTA_DOWNTOWN, RESTAURANT_COORDINATES, coordinateFor, distanceKm } from '../src/features/map/coordinates';
-import { DISCOVERY_RADIUS_METRES, areaLabel, discoveryArea, distanceLabel, inDiscoveryArea } from '../src/features/map/discoveryArea';
+import { DISCOVERY_RADIUS_METRES, areaLabel, discoveryArea, distanceLabel, inDiscoveryArea, offerSearchHere } from '../src/features/map/discoveryArea';
 import { categoryLabel, flavourLine } from '../src/features/map/labels';
 import { buildMapRestaurants, discoveredCount } from '../src/features/map/mapRestaurants';
 import { hudProgress } from '../src/features/map/hud';
@@ -179,5 +179,16 @@ describe('fog', () => {
     const ring = circleRing(centre, 400, 24);
     expect(ring).toHaveLength(24);
     for (const point of ring) expect(distanceKm(point, centre) * 1000).toBeCloseTo(400, -1);
+  });
+});
+
+describe('search this area', () => {
+  const midtown = { latitude: 33.781, longitude: -84.383 };
+  const area = discoveryArea(midtown);
+
+  it('is offered only once the map centre is more than 1 km from the circle centre', () => {
+    expect(offerSearchHere(midtown, area)).toBe(false);
+    expect(offerSearchHere({ latitude: midtown.latitude + 0.0085, longitude: midtown.longitude }, area)).toBe(false);
+    expect(offerSearchHere({ latitude: midtown.latitude + 0.0095, longitude: midtown.longitude }, area)).toBe(true);
   });
 });

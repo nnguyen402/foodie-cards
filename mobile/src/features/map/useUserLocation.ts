@@ -14,7 +14,7 @@ type UserPosition = {
   placeName: string | null;
 };
 
-async function nameOf(coordinate: Coordinate): Promise<string | null> {
+export async function placeNameOf(coordinate: Coordinate): Promise<string | null> {
   try {
     const [place] = await Location.reverseGeocodeAsync(coordinate);
     const parts = [place?.city ?? place?.district ?? place?.subregion, place?.region].filter(Boolean);
@@ -39,7 +39,7 @@ export function useUserLocation(): UserLocation {
         const coordinate = { latitude: fix.coords.latitude, longitude: fix.coords.longitude };
         if (!active) return;
         setLocation({ status: 'granted', coordinate, placeName: null });
-        const placeName = await nameOf(coordinate);
+        const placeName = await placeNameOf(coordinate);
         if (active && placeName) setLocation({ status: 'granted', coordinate, placeName });
       } catch {
         if (active) setLocation((current) => (current.status === 'pending' ? { status: 'denied', coordinate: null, placeName: null } : current));
@@ -55,7 +55,7 @@ export function useUserLocation(): UserLocation {
       const fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const coordinate = { latitude: fix.coords.latitude, longitude: fix.coords.longitude };
       setLocation((current) => ({ status: 'granted', coordinate, placeName: current.placeName }));
-      void nameOf(coordinate).then((placeName) => {
+      void placeNameOf(coordinate).then((placeName) => {
         if (placeName) setLocation((current) => (current.coordinate === coordinate ? { ...current, placeName } : current));
       });
       return coordinate;

@@ -15,8 +15,12 @@ export type MapRestaurants = {
   /** What the map shows for this area: our restaurants in range, then nearby OpenStreetMap places, capped. */
   restaurants: MapRestaurant[];
   nearby: 'idle' | 'loading' | 'ready' | 'failed';
+  /** Key of the area whose fetch last finished, successfully or not. See areaKey. */
+  settledFor: string | null;
   retryNearby: () => void;
 };
+
+export const areaKey = (area: DiscoveryArea | null) => (area ? `${area.centre.latitude},${area.centre.longitude}` : null);
 
 // One client for the whole session, so its cache survives leaving and returning to the tab.
 const nearbySource = createNearbySource({ fetcher: (url, init) => fetch(url, init), storage: AsyncStorage, log: (message) => console.warn(message) });
@@ -29,6 +33,7 @@ export function useMapRestaurants(area: DiscoveryArea | null): MapRestaurants {
   const { state, refresh } = useCollection();
   const [places, setPlaces] = useState<OsmPlace[]>([]);
   const [nearby, setNearby] = useState<MapRestaurants['nearby']>('idle');
+  const [settledFor, setSettledFor] = useState<string | null>(null);
   const request = useRef(0);
   const latitude = area?.centre.latitude;
   const longitude = area?.centre.longitude;
@@ -36,11 +41,13 @@ export function useMapRestaurants(area: DiscoveryArea | null): MapRestaurants {
   const loadNearby = useCallback(async () => {
     if (latitude === undefined || longitude === undefined) return;
     const centre = { latitude, longitude };
+    const key = `${latitude},${longitude}`;
     const token = ++request.current;
     const cached = nearbySource.cached(centre);
     if (cached) {
       setPlaces(cached);
       setNearby('ready');
+      setSettledFor(key);
       return;
     }
     // Whatever is already on screen stays there while loading and after a failure; the merge
@@ -49,18 +56,23 @@ export function useMapRestaurants(area: DiscoveryArea | null): MapRestaurants {
     const restored = await nearbySource.restore(centre);
     if (token !== request.current) return;
     if (restored) setPlaces(restored.places);
-    if (restored?.fresh) return setNearby('ready');
+    if (restored?.fresh) {
+      setNearby('ready');
+      return setSettledFor(key);
+    }
     try {
       const loaded = await nearbySource.load(centre);
       if (token !== request.current) return;
       setPlaces(loaded);
       setNearby('ready');
+      setSettledFor(key);
     } catch {
       if (token !== request.current) return;
       // Last resort when nothing live or saved covers this area: the bundled offline snapshot, where it reaches.
       const area = { centre, fallback: false };
       setPlaces((current) => (current.some((place) => inDiscoveryArea(place.coordinate, area)) ? current : offlinePlaces(centre)));
       setNearby('failed');
+      setSettledFor(key);
     }
   }, [latitude, longitude]);
 
@@ -73,5 +85,5 @@ export function useMapRestaurants(area: DiscoveryArea | null): MapRestaurants {
   const restaurants = useMemo(() => (area ? mergeNearby(catalog, places, area) : []), [catalog, places, area]);
   const error = useMemo(() => (state.status === 'error' ? { message: state.message, retry: () => void refresh() } : null), [state, refresh]);
 
-  return { loading: state.status === 'loading', error, restaurants, nearby, retryNearby: () => void loadNearby() };
+  return { loading: state.status === 'loading', error, restaurants, nearby, settledFor, retryNearby: () => void loadNearby() };
 }

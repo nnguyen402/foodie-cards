@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/reusables/text';
 import { useAuth } from '@/providers/auth-provider';
 import { hudProgress } from './hud';
+import { SearchAreaPill } from './SearchAreaPill';
 
 // Player bar, location chip and filter button, floating over the map. The map is always
 // dark, so these are fixed dark glass panels rather than themed surfaces.
@@ -18,9 +19,11 @@ type MapHudProps = {
   areaLabel: string;
   collectedOnly: boolean;
   onToggleCollectedOnly: () => void;
-  /** Moves the 5 km area to where the player is now. Hidden when there is no real location. */
-  onUpdateArea: (() => void) | null;
-  updatingArea: boolean;
+  /** Returns to the player and searches there. Hidden when there is no real location. */
+  onRecenter: (() => void) | null;
+  recentering: boolean;
+  /** "Search this area": shown once the map has drifted from the discovery circle, and while that search runs. */
+  searchPill: { visible: boolean; searching: boolean; onPress: () => void };
   nearby: 'idle' | 'loading' | 'ready' | 'failed';
   onRetryNearby: () => void;
 };
@@ -52,7 +55,7 @@ function FilterGlyph({ color }: { color: string }) {
   );
 }
 
-export function MapHud({ discovered, total, areaLabel, collectedOnly, onToggleCollectedOnly, onUpdateArea, updatingArea, nearby, onRetryNearby }: MapHudProps) {
+export function MapHud({ discovered, total, areaLabel, collectedOnly, onToggleCollectedOnly, onRecenter, recentering, searchPill, nearby, onRetryNearby }: MapHudProps) {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const hud = profile ? hudProgress(profile, discovered, total) : null;
@@ -90,18 +93,18 @@ export function MapHud({ discovered, total, areaLabel, collectedOnly, onToggleCo
           </View>
         </View>
         <View className="flex-row items-center gap-2">
-        {onUpdateArea ? (
+        {onRecenter ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Update nearby area to where you are now"
-            accessibilityState={{ busy: updatingArea, disabled: updatingArea }}
-            disabled={updatingArea}
-            onPress={onUpdateArea}
+            accessibilityLabel="Recenter on my location and search here"
+            accessibilityState={{ busy: recentering, disabled: recentering }}
+            disabled={recentering}
+            onPress={onRecenter}
             hitSlop={6}
             className="h-12 w-12 items-center justify-center rounded-full active:opacity-70"
             style={GLASS}
           >
-            {updatingArea ? <ActivityIndicator color={GOLD} /> : <TargetGlyph color={INK} />}
+            {recentering ? <ActivityIndicator color={GOLD} /> : <TargetGlyph color={INK} />}
           </Pressable>
         ) : null}
         <Pressable
@@ -117,12 +120,13 @@ export function MapHud({ discovered, total, areaLabel, collectedOnly, onToggleCo
         </Pressable>
         </View>
       </View>
+      <SearchAreaPill visible={searchPill.visible} searching={searchPill.searching} onPress={searchPill.onPress} />
       {nearby === 'failed' ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Couldn't load nearby restaurants. Retry." onPress={onRetryNearby} className="min-h-11 flex-row items-center self-start rounded-full px-3.5 active:opacity-70" style={[GLASS, { borderColor: 'rgba(223,118,109,0.7)' }]}>
           <Text className="text-xs font-semibold" style={{ color: INK }}>Couldn’t load nearby restaurants — <Text className="text-xs font-extrabold" style={{ color: GOLD }}>retry</Text></Text>
         </Pressable>
       ) : null}
-      {nearby === 'loading' ? (
+      {nearby === 'loading' && !searchPill.searching ? (
         <View accessibilityRole="progressbar" accessibilityLabel="Finding nearby restaurants" className="flex-row items-center gap-2 self-start rounded-full px-3.5 py-2" style={GLASS}>
           <ActivityIndicator size="small" color={GOLD} />
           <Text className="text-xs font-semibold" style={{ color: INK_MUTED }}>Finding nearby restaurants…</Text>

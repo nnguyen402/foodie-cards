@@ -4,6 +4,9 @@ import { ATLANTA_DOWNTOWN, distanceKm, type Coordinate } from './coordinates';
 // boundary for the map, not a rule about which receipts can be scanned.
 export const DISCOVERY_RADIUS_METRES = 5000;
 
+/** How far the map's centre must drift from the discovery circle's centre before "Search this area" is offered. */
+export const SEARCH_THIS_AREA_METRES = 1000;
+
 export type DiscoveryArea = { centre: Coordinate; /** True when no real location is available and the area is downtown Atlanta. */ fallback: boolean };
 
 export function discoveryArea(user: Coordinate | null): DiscoveryArea {
@@ -27,4 +30,8 @@ export function distanceLabel(from: Coordinate | null, to: Coordinate): string |
 export function areaLabel(area: DiscoveryArea, placeName: string | null): string {
   if (area.fallback) return 'Downtown Atlanta · location off';
   return placeName ?? 'Your area';
+}
+
+export function offerSearchHere(mapCentre: Coordinate, area: DiscoveryArea): boolean {
+  return distanceKm(mapCentre, area.centre) * 1000 > SEARCH_THIS_AREA_METRES;
 }

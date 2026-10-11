@@ -7,7 +7,7 @@ import MapView, { Circle, Marker } from 'react-native-maps';
 import { useReducedMotion } from 'react-native-reanimated';
 import { MessagePanel } from '@/components/ui/message-panel';
 import { spacing } from '@/theme/tokens';
-import { DISCOVERY_RADIUS_METRES, areaLabel, discoveryArea, distanceLabel, type DiscoveryArea } from './discoveryArea';
+import { DISCOVERY_RADIUS_METRES, areaLabel, discoveryArea, distanceLabel, offerSearchHere, type DiscoveryArea } from './discoveryArea';
 import { circleRing } from './fog';
 import { MapCardPopup } from './MapCardPopup';
 import { MapAtmosphere } from './MapAtmosphere';
@@ -16,8 +16,9 @@ import { discoveredCount, type MapRestaurant } from './mapRestaurants';
 import { animatedPinIds, type Region } from './pinMotion';
 import { PIN_CENTRE_OFFSET, PIN_POP_MS, RestaurantPin } from './RestaurantPin';
 import { RestaurantSheet } from './RestaurantSheet';
-import { useMapRestaurants } from './useMapRestaurants';
-import { useUserLocation } from './useUserLocation';
+import { areaKey, useMapRestaurants } from './useMapRestaurants';
+import { placeNameOf, useUserLocation } from './useUserLocation';
+import type { Coordinate } from './coordinates';
 
 // The camera looks straight down from high above, then drops to frame the discovery circle.
 // Apple Maps reads altitude, Google Maps reads zoom.
@@ -27,6 +28,9 @@ const LOCATION_WAIT_MS = 2500;
 const NIGHT = '#120e0b';
 // Room for the HUD above and the tab bar and preview card below when framing the circle.
 const FRAME_PADDING = { top: 190, right: 28, bottom: 130, left: 28 };
+
+// The pill waits for the map to be still this long, so it does not flicker while panning.
+const PILL_DEBOUNCE_MS = 350;
 
 const OSM_COPYRIGHT_URL = 'https://www.openstreetmap.org/copyright';
 
@@ -69,12 +73,18 @@ export function GameMap() {
   const [poppingId, setPoppingId] = useState<string | null>(null);
   const [cardOpen, setCardOpen] = useState(false);
   const [collectedOnly, setCollectedOnly] = useState(false);
-  // Set once, from the first location result, and never moved by later fixes or map gestures.
+  // Set from the first location result. After that it only moves on "Search this area" or recenter, never on map gestures.
   const [area, setArea] = useState<DiscoveryArea | null>(null);
-
-  const [updatingArea, setUpdatingArea] = useState(false);
+  // The name of a searched area, once geocoded; null while the area is still the player's own.
+  const [searched, setSearched] = useState<{ name: string | null } | null>(null);
+  const [mapCentre, setMapCentre] = useState<Coordinate | null>(null);
+  const [pillWanted, setPillWanted] = useState(false);
+  const [searchingKey, setSearchingKey] = useState<string | null>(null);
+  const [recentering, setRecentering] = useState(false);
+  const geocode = useRef(0);
   const data = useMapRestaurants(area);
   const shownArea = area ?? discoveryArea(null);
+  const searching = searchingKey !== null && searchingKey === areaKey(area) && data.settledFor !== searchingKey;
   const nearby = data.restaurants;
   const restaurants = useMemo(() => (collectedOnly ? nearby.filter((restaurant) => restaurant.card) : nearby), [nearby, collectedOnly]);
   const player = area && !area.fallback ? location.coordinate : null;
@@ -100,19 +110,46 @@ export function GameMap() {
     map.current?.fitToCoordinates(circleRing(area.centre, DISCOVERY_RADIUS_METRES, 12), { edgePadding: FRAME_PADDING, animated: !reducedMotion });
   }, [mapReady, area, reducedMotion]);
 
+  // Debounced: the pill follows where the map has come to rest, not where it is mid-pan.
+  useEffect(() => {
+    if (!area || !mapCentre) return;
+    const wanted = offerSearchHere(mapCentre, area);
+    const timer = setTimeout(() => setPillWanted(wanted), PILL_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [area, mapCentre]);
+
   const animated = useMemo(() => (reducedMotion ? new Set<string>() : animatedPinIds(restaurants, region)), [reducedMotion, restaurants, region]);
   const selected = restaurants.find((restaurant) => restaurant.id === selectedId) ?? null;
-  // The only thing that moves the discovery area after the first fix, and so the only thing that refetches.
-  const updateArea = useCallback(async () => {
-    setUpdatingArea(true);
+  // Moves the 5 km circle to where the map is looking and fetches there. The camera stays put.
+  const searchHere = useCallback(() => {
+    if (!mapCentre) return;
+    const next = { centre: mapCentre, fallback: false };
+    const token = ++geocode.current;
+    framed.current = next;
+    setSelectedId(null);
+    setSearched({ name: null });
+    setSearchingKey(areaKey(next));
+    setPillWanted(false);
+    setArea(next);
+    void placeNameOf(mapCentre).then((name) => {
+      if (token === geocode.current) setSearched({ name });
+    });
+  }, [mapCentre]);
+
+  // Back to the player: a fresh fix, then the circle moves there and the camera frames it.
+  const recenter = useCallback(async () => {
+    setRecentering(true);
     try {
       const coordinate = await location.refresh();
       if (coordinate) {
+        geocode.current += 1;
         setSelectedId(null);
+        setSearched(null);
+        setSearchingKey(null);
         setArea({ centre: coordinate, fallback: false });
       }
     } finally {
-      setUpdatingArea(false);
+      setRecentering(false);
     }
   }, [location]);
 
@@ -146,7 +183,10 @@ export function GameMap() {
         rotateEnabled={false}
         showsUserLocation={location.status === 'granted'}
         onMapReady={() => setMapReady(true)}
-        onRegionChangeComplete={setRegion}
+        onRegionChangeComplete={(next) => {
+          setRegion(next);
+          setMapCentre({ latitude: next.latitude, longitude: next.longitude });
+        }}
         onPress={() => setSelectedId(null)}
       >
         {area ? (
@@ -173,14 +213,15 @@ export function GameMap() {
       <MapHud
         discovered={discoveredCount(nearby)}
         total={nearby.length}
-        areaLabel={areaLabel(shownArea, location.placeName)}
+        areaLabel={areaLabel(shownArea, searched ? searched.name ?? 'Selected area' : location.placeName)}
         collectedOnly={collectedOnly}
         onToggleCollectedOnly={() => {
           setSelectedId(null);
           setCollectedOnly((current) => !current);
         }}
-        onUpdateArea={location.status === 'granted' ? () => void updateArea() : null}
-        updatingArea={updatingArea}
+        onRecenter={location.status === 'granted' ? () => void recenter() : null}
+        recentering={recentering}
+        searchPill={{ visible: pillWanted || searching, searching, onPress: searchHere }}
         nearby={data.nearby}
         onRetryNearby={data.retryNearby}
       />
