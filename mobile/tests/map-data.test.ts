@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ATLANTA_DOWNTOWN, RESTAURANT_COORDINATES, coordinateFor, distanceKm, mapCentre } from '../src/features/map/coordinates';
+import { ATLANTA_DOWNTOWN, RESTAURANT_COORDINATES, coordinateFor, distanceKm } from '../src/features/map/coordinates';
+import { DISCOVERY_RADIUS_METRES, areaLabel, discoveryArea, distanceLabel, inDiscoveryArea } from '../src/features/map/discoveryArea';
+import { categoryLabel, flavourLine } from '../src/features/map/labels';
 import { buildMapRestaurants, discoveredCount } from '../src/features/map/mapRestaurants';
 import { hudProgress } from '../src/features/map/hud';
 import { pinLook } from '../src/features/map/pinStyle';
@@ -37,12 +39,59 @@ describe('restaurant coordinates', () => {
     expect(coordinateFor({ id: 'unknown', latitude: 120, longitude: -84 })).toBeNull();
     expect(coordinateFor({ id: 'unknown', latitude: null, longitude: null })).toBeNull();
   });
+});
 
-  it('centres on the user when they are in the Atlanta area and on downtown otherwise', () => {
-    const midtown = { latitude: 33.781, longitude: -84.383 };
-    expect(mapCentre(midtown)).toEqual(midtown);
-    expect(mapCentre(null)).toEqual(ATLANTA_DOWNTOWN);
-    expect(mapCentre({ latitude: 40.71, longitude: -74.0 })).toEqual(ATLANTA_DOWNTOWN);
+describe('discovery area', () => {
+  const midtown = { latitude: 33.781, longitude: -84.383 };
+  const newYork = { latitude: 40.71, longitude: -74.0 };
+
+  it('is a fixed 5 km circle around the player, wherever they are', () => {
+    expect(DISCOVERY_RADIUS_METRES).toBe(5000);
+    expect(discoveryArea(midtown)).toEqual({ centre: midtown, fallback: false });
+    expect(discoveryArea(newYork)).toEqual({ centre: newYork, fallback: false });
+  });
+
+  it('falls back to downtown Atlanta, flagged as a fallback, without a location', () => {
+    expect(discoveryArea(null)).toEqual({ centre: ATLANTA_DOWNTOWN, fallback: true });
+  });
+
+  it('keeps all five seeded restaurants inside the downtown fallback area', () => {
+    for (const coordinate of Object.values(RESTAURANT_COORDINATES)) expect(inDiscoveryArea(coordinate, discoveryArea(null))).toBe(true);
+  });
+
+  it('uses real distance: just inside is in, just outside is out', () => {
+    const area = discoveryArea(midtown);
+    expect(inDiscoveryArea({ latitude: midtown.latitude + 0.0440, longitude: midtown.longitude }, area)).toBe(true);
+    expect(inDiscoveryArea({ latitude: midtown.latitude + 0.0460, longitude: midtown.longitude }, area)).toBe(false);
+    expect(inDiscoveryArea(RESTAURANT_COORDINATES['10000000-0000-4000-8000-000000000004'], discoveryArea(newYork))).toBe(false);
+  });
+
+  it('labels distance in miles, or feet when very close', () => {
+    expect(distanceLabel(midtown, { latitude: midtown.latitude + 0.0116, longitude: midtown.longitude })).toBe('0.8 mi');
+    expect(distanceLabel(midtown, { latitude: midtown.latitude + 0.0005, longitude: midtown.longitude })).toBe('180 ft');
+  });
+
+  it('shows no distance without a real player position', () => {
+    expect(distanceLabel(null, midtown)).toBeNull();
+  });
+
+  it('names the area honestly', () => {
+    expect(areaLabel(discoveryArea(midtown), 'Atlanta, GA')).toBe('Atlanta, GA');
+    expect(areaLabel(discoveryArea(midtown), null)).toBe('Your area');
+    expect(areaLabel(discoveryArea(null), 'Atlanta, GA')).toBe('Downtown Atlanta · location off');
+  });
+});
+
+describe('panel wording', () => {
+  it('turns a category key into a readable label', () => {
+    expect(categoryLabel('soul_food')).toBe('Soul food');
+    expect(categoryLabel('pizza')).toBe('Pizza');
+    expect(categoryLabel('  ')).toBe('Restaurant');
+  });
+
+  it('has a flavour line per cuisine and a general one otherwise', () => {
+    expect(flavourLine('barbecue')).toBe('Low, slow and smoky.');
+    expect(flavourLine('food_truck')).toBe('A table worth coming back to.');
   });
 });
 
@@ -59,7 +108,7 @@ describe('buildMapRestaurants', () => {
 
   it('splits the location label into neighbourhood and address and picks the icon', () => {
     const [pin] = buildMapRestaurants({ owned: [], locked: [varsity] });
-    expect(pin).toMatchObject({ neighbourhood: 'Downtown', address: '61 North Ave NW', icon: 'burger' });
+    expect(pin).toMatchObject({ neighbourhood: 'Downtown', address: '61 North Ave NW', icon: 'burger', category: 'fast_food', theme });
   });
 
   it('leaves out restaurants without coordinates', () => {

@@ -10,15 +10,15 @@ import { gradient } from '../cards/gradient';
 
 const TINT = 'rgba(255,138,76,0.10)';
 const NIGHT = 'rgba(36,18,64,0.16)';
-const VIGNETTE = 'radial-gradient(ellipse at 50% 50%, rgba(10,6,20,0) 52%, rgba(10,6,20,0.62) 100%)';
+const VIGNETTE = 'radial-gradient(ellipse at 50% 50%, rgba(10,6,20,0) 52%, rgba(10,6,20,0.5) 100%)';
 const CLOUDS = [
-  { top: 0.07, width: 190, drift: 0.55, durationMs: 62000, opacity: 0.16 },
-  { top: 0.15, width: 130, drift: -0.5, durationMs: 78000, opacity: 0.12 },
-  { top: 0.03, width: 240, drift: 0.4, durationMs: 94000, opacity: 0.1 },
+  { top: 0.07, width: 190, drift: 0.55, durationMs: 62000, opacity: 0.1 },
+  { top: 0.15, width: 130, drift: -0.5, durationMs: 78000, opacity: 0.08 },
+  { top: 0.03, width: 240, drift: 0.4, durationMs: 94000, opacity: 0.06 },
 ] as const;
-const TWINKLES = 12;
+const TWINKLES = 8;
 
-const twinkle = { '0%': { opacity: 0.08 }, '50%': { opacity: 0.85 }, '100%': { opacity: 0.08 } };
+const twinkle = { '0%': { opacity: 0.08 }, '50%': { opacity: 0.6 }, '100%': { opacity: 0.08 } };
 
 function Cloud({ width, opacity }: { width: number; opacity: number }) {
   const height = width * 0.34;

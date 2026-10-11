@@ -23,6 +23,8 @@ type RestaurantCardProps = {
   width: number;
   /** Prepared logo, storefront or food photo. Without one the themed fallback is drawn. */
   heroSource?: ImageSourcePropType;
+  /** Preview of a restaurant the user has not collected: no stage, XP or visits are shown. */
+  uncollected?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -30,7 +32,7 @@ function windowStyle(box: WindowRect, backgroundColor: string): ViewStyle {
   return { position: 'absolute', left: box.x, top: box.y, width: box.w, height: box.h, borderRadius: box.r, backgroundColor, overflow: 'hidden' };
 }
 
-export function RestaurantCard({ card, width, heroSource, style }: RestaurantCardProps) {
+export function RestaurantCard({ card, width, heroSource, uncollected = false, style }: RestaurantCardProps) {
   const rects = useMemo(() => frameRects(width), [width]);
   const { restaurant } = card;
   const { theme } = restaurant;
@@ -47,7 +49,7 @@ export function RestaurantCard({ card, width, heroSource, style }: RestaurantCar
     <View
       accessible
       accessibilityRole="image"
-      accessibilityLabel={`${restaurant.name}, ${label} card, ${card.cardXP} XP, ${visits}, ${ratingSpoken(card.rating)}`}
+      accessibilityLabel={uncollected ? `${restaurant.name}, not collected yet` : `${restaurant.name}, ${label} card, ${card.cardXP} XP, ${visits}, ${ratingSpoken(card.rating)}`}
       style={[{ width, height: rects.height }, style]}
     >
       <CardFrame stage={card.stage} rects={rects} />
@@ -78,22 +80,31 @@ export function RestaurantCard({ card, width, heroSource, style }: RestaurantCar
       </View>
 
       <View style={[windowStyle(rects.stats, STATS_SURFACE), { paddingHorizontal: px(28), justifyContent: 'center', gap: px(compact ? 6 : 14) }]}>
-        <View style={styles.row}>
-          <View style={{ backgroundColor: theme.accentColor, borderRadius: px(40), paddingHorizontal: px(22), paddingVertical: px(6) }}>
-            <Text numberOfLines={1} maxFontSizeMultiplier={MAX_TEXT_SCALE} style={{ color: onAccent, fontWeight: '700', fontSize: Math.max(10, px(32)) }}>{label}</Text>
-          </View>
-          <Text numberOfLines={1} maxFontSizeMultiplier={MAX_TEXT_SCALE} style={{ color: cardInk.dark, fontWeight: '700', fontSize: Math.max(10, px(34)) }}>
-            {compact ? `${card.cardXP} XP` : rating}
-          </Text>
-        </View>
-        {compact ? null : (
+        {uncollected ? (
           <>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={MAX_TEXT_SCALE} style={{ color: cardInk.dark, fontWeight: '600', fontSize: px(36) }}>
-              {progress.nextStageLabel ? progress.text : `${card.cardXP} XP · ${visits}`}
-            </Text>
-            <Text numberOfLines={1} maxFontSizeMultiplier={MAX_TEXT_SCALE} style={{ color: STATS_MUTED, fontSize: px(28) }}>
-              {progress.nextStageLabel ? `Both needed for ${progress.nextStageLabel}` : 'Highest stage reached'}
-            </Text>
+            <Text numberOfLines={1} maxFontSizeMultiplier={MAX_TEXT_SCALE} style={{ color: cardInk.dark, fontWeight: '700', fontSize: Math.max(11, px(38)) }}>Not collected yet</Text>
+            <Text numberOfLines={1} maxFontSizeMultiplier={MAX_TEXT_SCALE} style={{ color: STATS_MUTED, fontSize: Math.max(10, px(28)) }}>Scan a receipt to unlock</Text>
+          </>
+        ) : (
+          <>
+            <View style={styles.row}>
+              <View style={{ backgroundColor: theme.accentColor, borderRadius: px(40), paddingHorizontal: px(22), paddingVertical: px(6) }}>
+                <Text numberOfLines={1} maxFontSizeMultiplier={MAX_TEXT_SCALE} style={{ color: onAccent, fontWeight: '700', fontSize: Math.max(10, px(32)) }}>{label}</Text>
+              </View>
+              <Text numberOfLines={1} maxFontSizeMultiplier={MAX_TEXT_SCALE} style={{ color: cardInk.dark, fontWeight: '700', fontSize: Math.max(10, px(34)) }}>
+                {compact ? `${card.cardXP} XP` : rating}
+              </Text>
+            </View>
+            {compact ? null : (
+              <>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={MAX_TEXT_SCALE} style={{ color: cardInk.dark, fontWeight: '600', fontSize: px(36) }}>
+                  {progress.nextStageLabel ? progress.text : `${card.cardXP} XP · ${visits}`}
+                </Text>
+                <Text numberOfLines={1} maxFontSizeMultiplier={MAX_TEXT_SCALE} style={{ color: STATS_MUTED, fontSize: px(28) }}>
+                  {progress.nextStageLabel ? `Both needed for ${progress.nextStageLabel}` : 'Highest stage reached'}
+                </Text>
+              </>
+            )}
           </>
         )}
       </View>

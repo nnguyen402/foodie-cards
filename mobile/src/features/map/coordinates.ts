@@ -19,9 +19,6 @@ export const RESTAURANT_COORDINATES: Record<string, Coordinate> = {
 };
 
 export const ATLANTA_DOWNTOWN: Coordinate = { latitude: 33.749, longitude: -84.388 };
-// Further out than this, the user's own position would show a map with none of our pins on it.
-const ATLANTA_AREA_KM = 30;
-
 const isCoordinate = (latitude: unknown, longitude: unknown): boolean =>
   typeof latitude === 'number' && typeof longitude === 'number' && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
 
@@ -37,8 +34,4 @@ export function distanceKm(a: Coordinate, b: Coordinate): number {
   const dLon = radians(b.longitude - a.longitude);
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(radians(a.latitude)) * Math.cos(radians(b.latitude)) * Math.sin(dLon / 2) ** 2;
   return 6371 * 2 * Math.asin(Math.sqrt(h));
-}
-
-export function mapCentre(user: Coordinate | null): Coordinate {
-  return user && distanceKm(user, ATLANTA_DOWNTOWN) <= ATLANTA_AREA_KM ? user : ATLANTA_DOWNTOWN;
 }
