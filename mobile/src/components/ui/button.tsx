@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, type PressableProps } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, type PressableProps, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 import { AppText } from './app-text';
 import { colors, radius, spacing } from '@/theme/tokens';
@@ -10,6 +10,10 @@ type ButtonProps = Pick<PressableProps, 'onPress' | 'accessibilityLabel' | 'test
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
+  /** Optional overrides for screens with their own look. Defaults leave the shared style unchanged. */
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
+  leftIcon?: ReactNode;
 };
 
 const motionStyle = {
@@ -20,7 +24,7 @@ const motionStyle = {
 } as const;
 const pressedMotionStyle = { transform: [{ scale: 0.97 }] } as const;
 
-export function Button({ label, onPress, accessibilityLabel, testID, variant = 'primary', loading = false, disabled = false, fullWidth = true }: ButtonProps) {
+export function Button({ label, onPress, accessibilityLabel, testID, variant = 'primary', loading = false, disabled = false, fullWidth = true, style, textStyle, leftIcon }: ButtonProps) {
   const [pressed, setPressed] = useState(false);
   const reducedMotion = useReducedMotion();
   const unavailable = disabled || loading;
@@ -50,10 +54,11 @@ export function Button({ label, onPress, accessibilityLabel, testID, variant = '
         motionStyle,
         styles.button,
         { backgroundColor: palette.backgroundColor, borderColor: palette.borderColor },
+        style,
         unavailable ? styles.unavailable : undefined,
         pressed && !unavailable && !reducedMotion ? pressedMotionStyle : undefined,
       ]}>
-        {loading ? <ActivityIndicator color={palette.text} /> : <AppText strong style={{ color: palette.text }}>{label}</AppText>}
+        {loading ? <ActivityIndicator color={(StyleSheet.flatten(textStyle)?.color as string | undefined) ?? palette.text} /> : <>{leftIcon}<AppText strong style={[{ color: palette.text }, textStyle]}>{label}</AppText></>}
       </Animated.View>
     </Pressable>
   );

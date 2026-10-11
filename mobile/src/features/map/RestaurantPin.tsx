@@ -1,15 +1,16 @@
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { cubicBezier } from 'react-native-reanimated';
-import { CuisineIcon } from '../cards/CuisineIcon';
+import { CuisineArt } from '../cards/CuisineArtView';
+import { cuisineColors, hasCuisineArt } from '../cards/cuisineArt';
 import type { MapRestaurant } from './mapRestaurants';
 import { idleMotion, type IdleMotion } from './pinMotion';
 import { pinLook } from './pinStyle';
 
-// One map token, drawn in code: a big round badge with a thick ring in the stage colour and
-// the cuisine icon inside, a crown above it at the top stage, and a dark name pill below.
-// Locked tokens are grey, dim and still; collected ones glow and, when `animate` is set,
-// run the idle motion of their cuisine.
+// One map token, drawn in code: a big round badge with a thick ring in its cuisine colour and
+// the cuisine art or icon inside, a crown above it at the top stage, and a dark name pill below.
+// Locked tokens keep their cuisine colours, dimmed, with a lock badge, and stay still;
+// collected ones glow in their stage colour and, when `animate` is set, run the idle motion.
 
 const BADGE = 64;
 const ICON = 36;
@@ -112,6 +113,8 @@ function Crown() {
 export const RestaurantPin = memo(function RestaurantPin({ restaurant, animate, popping, distance }: RestaurantPinProps) {
   const look = pinLook(restaurant.card?.stage ?? null);
   const motion = idleMotion(restaurant.icon);
+  const colors = cuisineColors(restaurant.cuisine);
+  const art = hasCuisineArt(restaurant.cuisine);
   return (
     <View style={[styles.box, { opacity: look.opacity }]}>
       {look.sparkle ? <Crown /> : <View style={styles.crown} />}
@@ -119,11 +122,15 @@ export const RestaurantPin = memo(function RestaurantPin({ restaurant, animate, 
         {look.glow ? (
           <Animated.View style={[styles.glow, { boxShadow: `0 0 18px ${look.glow}, 0 0 6px ${look.glow}`, borderColor: look.glow }, animate ? { animationName: glowPulse, ...loop(2400) } : null]} />
         ) : null}
-        <View style={[styles.badge, { backgroundColor: look.fill, borderColor: look.ring }]}>
-          <Animated.View style={animate ? ICON_MOTION[motion] : null}>
-            <CuisineIcon kind={restaurant.icon} size={ICON} color={look.ink} cutout={look.fill} />
-          </Animated.View>
-          {animate ? <Extras motion={motion} /> : null}
+        <View style={[styles.badge, { backgroundColor: colors.fill, borderColor: colors.ring }]}>
+          <CuisineArt
+            cuisine={restaurant.cuisine}
+            variant="token"
+            tint={{ background: colors.fill, ink: colors.ink }}
+            // Art stays still; only the drawn icon runs its idle motion.
+            iconWrapper={(icon) => <Animated.View style={animate ? ICON_MOTION[motion] : null}>{icon}</Animated.View>}
+          />
+          {animate && !art ? <Extras motion={motion} /> : null}
         </View>
         {look.locked ? (
           <View style={styles.lock}>
@@ -153,9 +160,9 @@ const styles = StyleSheet.create({
   glow: { position: 'absolute', left: 0, top: 0, width: BADGE, height: BADGE, borderRadius: BADGE / 2, borderWidth: 1 },
   steam: { position: 'absolute', top: 6, width: 4, height: 11, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.85)', opacity: 0 },
   flame: { position: 'absolute', top: 4, width: 8, height: 13, borderTopLeftRadius: 6, borderTopRightRadius: 6, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, transformOrigin: '50% 100%' },
-  lock: { position: 'absolute', right: -3, top: -3, width: 22, height: 22, borderRadius: 11, backgroundColor: '#1a130d', borderWidth: 1.5, borderColor: '#8d8a87', alignItems: 'center', justifyContent: 'center' },
-  shackle: { width: 7, height: 5, borderTopLeftRadius: 4, borderTopRightRadius: 4, borderWidth: 1.5, borderBottomWidth: 0, borderColor: '#b4b1ae' },
-  lockBody: { width: 10, height: 7, borderRadius: 1.5, backgroundColor: '#b4b1ae' },
+  lock: { position: 'absolute', right: -3, top: -3, width: 22, height: 22, borderRadius: 11, backgroundColor: '#1a130d', borderWidth: 1.5, borderColor: '#f2b632', alignItems: 'center', justifyContent: 'center' },
+  shackle: { width: 7, height: 5, borderTopLeftRadius: 4, borderTopRightRadius: 4, borderWidth: 1.5, borderBottomWidth: 0, borderColor: '#f6ede2' },
+  lockBody: { width: 10, height: 7, borderRadius: 1.5, backgroundColor: '#f6ede2' },
   sparkle: { position: 'absolute', right: 0, top: 0, width: 9, height: 9, borderRadius: 1.5, backgroundColor: '#fff6d6', transform: [{ rotate: '45deg' }], boxShadow: '0 0 6px #f5c542' },
   label: { marginTop: LABEL_GAP, maxWidth: PIN_BOX.width, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(18,14,11,0.9)', borderWidth: 1, borderColor: 'rgba(246,237,226,0.14)', alignItems: 'center' },
   name: { color: '#f6ede2', fontSize: 12, fontWeight: '700' },

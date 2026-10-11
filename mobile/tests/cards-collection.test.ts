@@ -10,6 +10,9 @@ const restaurant = (id: string, name: string): RestaurantRow => ({
   theme: null,
   hero_image_path: null,
   hero_image_kind: null,
+  latitude: null,
+  longitude: null,
+  brand_key: null,
 });
 
 const card = (id: string, restaurants: RestaurantRow | null, stage = 'regular'): CardRow => ({
@@ -33,7 +36,7 @@ describe('catalog restaurants', () => {
   });
 
   it('selects the columns the mapper reads', () => {
-    expect(RESTAURANT_SELECT).toBe('id,name,location_label,category,theme,hero_image_path,hero_image_kind');
+    expect(RESTAURANT_SELECT).toBe('id,name,location_label,category,theme,hero_image_path,hero_image_kind,latitude,longitude,brand_key');
   });
 });
 

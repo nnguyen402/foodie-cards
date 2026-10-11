@@ -5,6 +5,7 @@ import {
   progressionResultSchema,
   reviewResponseSchema,
   type ConfirmedReceipt,
+  type Place,
   type Profile,
   type ProgressionResult,
   type ReviewRequest,
@@ -14,6 +15,7 @@ import {
 export type AuthenticatedUser = { userId: string };
 export type ReceiptMenuItem = { id: string; canonicalName: string; aliases: string[] };
 export type OwnedReceiptDraft = {
+  restaurantName?: string | null;
   imagePath: string | null;
   imageHash: string | null;
   status: 'draft' | 'confirmed' | 'accepted' | 'rejected';
@@ -21,6 +23,7 @@ export type OwnedReceiptDraft = {
   acceptanceResult: unknown;
 };
 export type PendingReward = { eventId: string; createdAt: string; result: ProgressionResult };
+export type PlaceSubmission = Omit<ConfirmedReceipt, 'restaurantId' | 'place'> & { place: Place };
 
 export type ServerDependencies = Partial<ProfileActions> & {
   verifyAccessToken: (token: string) => Promise<AuthenticatedUser | null>;
@@ -28,6 +31,7 @@ export type ServerDependencies = Partial<ProfileActions> & {
   loadReceiptDraft?: (userId: string, draftId: string) => Promise<OwnedReceiptDraft | null>;
   loadRestaurantMenu?: (restaurantId: string) => Promise<{ restaurantId: string; items: ReceiptMenuItem[] } | null>;
   acceptReceipt?: (userId: string, receiptId: string, submissionId: string, confirmed: ConfirmedReceipt & { items: Array<ConfirmedReceipt['items'][number] & { menuItemId: string }> }) => Promise<ProgressionResult>;
+  acceptPlaceReceipt?: (userId: string, receiptId: string, submissionId: string, confirmed: PlaceSubmission) => Promise<ProgressionResult>;
   saveReview?: (userId: string, restaurantId: string, review: ReviewRequest) => Promise<ReviewResponse>;
   acknowledgeReward?: (userId: string, eventId: string) => Promise<{ eventId: string; viewedAt: string } | null>;
   loadPendingRewards?: (userId: string) => Promise<PendingReward[]>;
@@ -77,7 +81,7 @@ export function createSupabaseDependencies(
     async loadReceiptDraft(userId, draftId) {
       const { data, error } = await supabase
         .from('receipts')
-        .select('image_path, image_hash, status, submission_id, acceptance_result')
+        .select('image_path, image_hash, status, submission_id, acceptance_result, extraction_draft')
         .eq('id', draftId)
         .eq('user_id', userId)
         .maybeSingle();
@@ -85,6 +89,8 @@ export function createSupabaseDependencies(
       if (!data) return null;
       if (!['draft', 'confirmed', 'accepted', 'rejected'].includes(data.status)) throw new Error('Invalid stored receipt status');
       return {
+        restaurantName: data.extraction_draft && typeof data.extraction_draft === 'object' && 'restaurantName' in data.extraction_draft
+          ? (data.extraction_draft as { restaurantName?: string | null }).restaurantName : null,
         imagePath: data.image_path,
         imageHash: data.image_hash,
         status: data.status as OwnedReceiptDraft['status'],
@@ -119,6 +125,18 @@ export function createSupabaseDependencies(
       if (error) throw error;
       const parsed = progressionResultSchema.safeParse(data);
       if (!parsed.success) throw new Error('Receipt acceptance returned an invalid result');
+      return parsed.data;
+    },
+    async acceptPlaceReceipt(userId, receiptId, submissionId, confirmed) {
+      const { data, error } = await supabase.rpc('accept_place_receipt', {
+        p_user_id: userId,
+        p_receipt_id: receiptId,
+        p_submission_id: submissionId,
+        p_confirmed: confirmed,
+      });
+      if (error) throw error;
+      const parsed = progressionResultSchema.safeParse(data);
+      if (!parsed.success) throw new Error('Place receipt acceptance returned an invalid result');
       return parsed.data;
     },
     async saveReview(userId, restaurantId, review) {

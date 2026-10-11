@@ -1,10 +1,16 @@
+import { useState } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { AppText } from '@/components/ui/app-text';
 import { MessagePanel } from '@/components/ui/message-panel';
 import { formatCalendarDate } from '@/features/cards/detail';
 import { RestaurantCard } from '@/features/cards/RestaurantCard';
-import { nextStageGoal, stageLabel } from '@/features/cards/stageStyles';
+import { RarityLabel, SpinCard } from '@/features/cards/SpinCard';
+import { cuisineKeyFor } from '@/features/cards/cuisineArt';
+import { abilityLine } from '@/features/map/labels';
+import { RarityBackground } from '@/features/cards/RarityBackground';
+import { DETAIL_BACKGROUND, nextStageGoal, stageLabel, stageTheme } from '@/features/cards/stageStyles';
 import { useCardDetail } from '@/features/cards/useCardDetail';
 import { PrivateRouteGuard } from '@/features/auth/PrivateRouteGuard';
 import { ReviewEditor } from '@/features/reviews/review-editor';
@@ -44,8 +50,12 @@ function CardDetailContent() {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const { state, refresh } = useCardDetail(id ?? '');
+  const [spins, setSpins] = useState(0);
   const cardWidth = Math.min(windowWidth - 2 * spacing.page, 360);
   const title = state.status === 'ready' ? state.detail.card.restaurant.name : '';
+  const ready = state.status === 'ready';
+  const stage = state.status === 'ready' ? state.detail.card.stage : 'discovered';
+  const theme = stageTheme(stage);
 
   let content;
   if (state.status === 'loading') {
@@ -60,7 +70,20 @@ function CardDetailContent() {
     const visitText = (count: number) => `${count} ${count === 1 ? 'visit' : 'visits'}`;
     content = (
       <>
-        <View style={styles.cardWrap}><RestaurantCard card={card} width={cardWidth} /></View>
+        <View style={styles.cardWrap}>
+          <SpinCard
+            width={cardWidth}
+            accessibilityLabel={`${card.restaurant.name}, ${stageLabel(card.stage)} card`}
+            accessibilityHint="Turns the card around."
+            onSpin={() => setSpins((count) => count + 1)}
+          >
+            <RestaurantCard card={card} width={cardWidth} />
+          </SpinCard>
+        </View>
+        <View style={styles.rarity}>
+          <RarityLabel stage={card.stage} playKey={spins} />
+          <AppText variant="small" style={styles.onDarkMuted}>{abilityLine(cuisineKeyFor({ name: card.restaurant.name, cuisine: card.restaurant.category }))}</AppText>
+        </View>
 
         <Section title="Progress">
           {goal ? (
@@ -115,12 +138,22 @@ function CardDetailContent() {
   }
 
   return (
-    <>
-      <Stack.Screen options={{ title }} />
-      <ScrollView contentInsetAdjustmentBehavior="automatic" style={styles.screen} contentContainerStyle={styles.content}>
+    <View style={[styles.screen, { backgroundColor: ready ? DETAIL_BACKGROUND : colors.canvas }]}>
+      {/* A loaded card gets the backdrop colour in the header, so no white bar sits over the background. */}
+      <Stack.Screen
+        options={
+          ready
+            ? { title, headerStyle: { backgroundColor: DETAIL_BACKGROUND }, headerTintColor: theme.label, headerTitleStyle: { color: theme.label }, headerShadowVisible: false }
+            : { title }
+        }
+      />
+      {/* Set from inside the screen: Expo Go cannot change the Info.plist key that a Stack option needs. */}
+      {ready ? <StatusBar style="light" /> : null}
+      {ready ? <RarityBackground stage={stage} /> : null}
+      <ScrollView contentInsetAdjustmentBehavior="automatic" style={styles.scroll} contentContainerStyle={styles.content}>
         {content}
       </ScrollView>
-    </>
+    </View>
   );
 }
 
@@ -133,11 +166,14 @@ export default function CardDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.canvas },
+  screen: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: spacing.page, paddingBottom: spacing.xxl, gap: spacing.xl },
   cardWrap: { alignItems: 'center' },
+  rarity: { alignItems: 'center', gap: 2 },
+  onDarkMuted: { color: '#d6cdc2', textAlign: 'center' },
   section: { gap: spacing.sm },
-  sectionTitle: { paddingHorizontal: spacing.lg },
+  sectionTitle: { paddingHorizontal: spacing.lg, color: '#d6cdc2' },
   group: { backgroundColor: colors.surface, borderRadius: radius.control, overflow: 'hidden' },
   row: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },
   rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },

@@ -1,3 +1,4 @@
+import { cuisineIconFor, cuisineKeyFor } from '../cards/cuisineArt';
 import type { CuisineIconKind } from '../cards/themes';
 import type { Coordinate } from './coordinates';
 
@@ -62,28 +63,6 @@ export function normalizeOsm(response: unknown): OsmPlace[] {
   });
 }
 
-const ICONS: Record<string, CuisineIconKind> = {
-  pizza: 'pizza',
-  italian_pizza: 'pizza',
-  burger: 'burger',
-  american: 'burger',
-  hot_dog: 'burger',
-  sandwich: 'burger',
-  bbq: 'bbq',
-  barbecue: 'bbq',
-  steak_house: 'bbq',
-  sushi: 'sushi',
-  japanese: 'sushi',
-  chicken: 'southern',
-  fried_chicken: 'southern',
-  southern: 'southern',
-  soul_food: 'southern',
-  coffee_shop: 'coffee',
-  coffee: 'coffee',
-  bubble_tea: 'coffee',
-  tea: 'coffee',
-};
-
 export function osmIcon(cuisine: string | null, amenity: string): CuisineIconKind {
-  return (cuisine ? ICONS[cuisine] : undefined) ?? (amenity === 'cafe' ? 'coffee' : 'plate');
+  return cuisineIconFor(cuisineKeyFor({ name: '', cuisine, amenity }));
 }

@@ -17,7 +17,7 @@ const CACHE_MS = 30 * 60 * 1000;
 // A little longer than the 25 s the query allows the server.
 const TIMEOUT_MS = 28 * 1000;
 // A smaller circle to ask for when the server times out on the full one.
-const REDUCED_RADIUS_METRES = 3000;
+const REDUCED_RADIUS_METRES = 2000;
 const REST_MS = 60 * 1000;
 // A short, growing wait before moving on to the next mirror.
 const NEXT_MIRROR_MS = 500;

@@ -16,8 +16,8 @@ const element = (over: Record<string, unknown>) => ({ type: 'node', id: 1, lat: 
 
 describe('overpassQuery', () => {
   it('asks for named restaurants, fast food and cafes around the centre', () => {
-    const query = overpassQuery(suwanee, 5000);
-    expect(query).toContain('nwr["amenity"~"^(restaurant|fast_food|cafe)$"]["name"](around:5000,34.0515,-84.0713)');
+    const query = overpassQuery(suwanee, 3000);
+    expect(query).toContain('nwr["amenity"~"^(restaurant|fast_food|cafe)$"]["name"](around:3000,34.0515,-84.0713)');
     expect(query).toContain('[timeout:25]');
     expect(query).toContain('out tags center 120;');
   });
@@ -57,14 +57,15 @@ describe('osmIcon', () => {
 
   it('falls back to coffee for a cafe and the plate otherwise', () => {
     expect(osmIcon(null, 'cafe')).toBe('coffee');
-    expect(osmIcon('vietnamese', 'restaurant')).toBe('plate');
+    expect(osmIcon('vietnamese', 'restaurant')).toBe('sushi');
+    expect(osmIcon('klingon', 'restaurant')).toBe('plate');
     expect(osmIcon(null, 'restaurant')).toBe('plate');
   });
 });
 
 const osmPlace = (id: number, name: string, metresNorth: number) => normalizeOsm({ elements: [element({ id, lat: north(metresNorth).latitude, tags: { amenity: 'restaurant', name } })] })[0];
 const seeded = (name: string, metresNorth: number): MapRestaurant => ({
-  id: `seed-${name}`, source: 'catalog', osm: null, name, brandKey: `name:${normalizedName(name)}`, neighbourhood: 'Town', address: '1 Main St', category: 'pizza', icon: 'pizza',
+  id: `seed-${name}`, source: 'catalog', osm: null, name, brandKey: `name:${normalizedName(name)}`, neighbourhood: 'Town', address: '1 Main St', category: 'pizza', cuisine: 'pizza', icon: 'pizza',
   theme: { primaryColor: '#000000', accentColor: '#ffffff', fontKey: 'bold', patternKey: 'none' } as MapRestaurant['theme'], coordinate: north(metresNorth), card: null,
 });
 
@@ -81,9 +82,14 @@ describe('sameRestaurant', () => {
 });
 
 describe('mergeNearby', () => {
-  it('keeps only places inside the 5 km circle, by real distance', () => {
-    const merged = mergeNearby([], [osmPlace(1, 'Near', 4900), osmPlace(2, 'Far', 5200)], area);
+  it('keeps only places inside the 3 km circle, by real distance', () => {
+    const merged = mergeNearby([], [osmPlace(1, 'Near', 2900), osmPlace(2, 'Far', 3200)], area);
     expect(merged.map((pin) => pin.name)).toEqual(['Near']);
+  });
+
+  it('always keeps our own restaurants, even far outside the 3 km circle; OSM places keep the limit', () => {
+    const merged = mergeNearby([seeded('Far Seeded', 4400)], [osmPlace(1, 'Near', 500), osmPlace(2, 'Too Far', 3500)], area);
+    expect(merged.map((pin) => pin.name)).toEqual(['Far Seeded', 'Near']);
   });
 
   it('folds an OSM duplicate into the seeded restaurant and keeps the seeded identity', () => {
@@ -111,7 +117,7 @@ describe('mergeNearby', () => {
 
   it('caps the visible set at 40, seeded first, then the nearest OSM places', () => {
     const many = Array.from({ length: 60 }, (_, index) => osmPlace(index + 1, `Place ${index + 1}`, 100 + index * 50));
-    const merged = mergeNearby([seeded('Seeded Far', 4000)], many, area);
+    const merged = mergeNearby([seeded('Seeded Far', 2900)], many, area);
     expect(MAX_VISIBLE_RESTAURANTS).toBe(40);
     expect(merged).toHaveLength(40);
     expect(merged[0].id).toBe('seed-Seeded Far');
@@ -144,7 +150,7 @@ describe('nearby source', () => {
     expect(places.map((place) => place.key)).toEqual(['osm:node/5']);
     expect(hosts(calls)).toEqual(['overpass-api.de']);
     expect(calls[0].init.headers['User-Agent']).toMatch(/FoodieCards/);
-    expect(decodeURIComponent(calls[0].init.body)).toContain('around:5000');
+    expect(decodeURIComponent(calls[0].init.body)).toContain('around:3000');
   });
 
   it('serves the same area from the session cache without another request', async () => {
@@ -249,19 +255,19 @@ describe('504 handling', () => {
     return { calls, result };
   };
 
-  it('retries the same endpoint once with a 3 km radius', async () => {
+  it('retries the same endpoint once with a 2 km radius', async () => {
     const { calls, result } = await run([reply(504), reply(200)]);
     expect(result).toBe(1);
     expect(calls.map((call) => call.url.split('/')[2])).toEqual(['overpass-api.de', 'overpass-api.de']);
-    expect(calls[0].body).toContain('around:5000');
-    expect(calls[1].body).toContain('around:3000');
+    expect(calls[0].body).toContain('around:3000');
+    expect(calls[1].body).toContain('around:2000');
   });
 
   it('moves to the next mirror when the smaller circle also times out', async () => {
     const { calls, result } = await run([reply(504), reply(504), reply(200)]);
     expect(result).toBe(1);
     expect(calls.map((call) => call.url.split('/')[2])).toEqual(['overpass-api.de', 'overpass-api.de', 'overpass.kumi.systems']);
-    expect(calls[2].body).toContain('around:5000');
+    expect(calls[2].body).toContain('around:3000');
   });
 });
 
@@ -288,7 +294,7 @@ describe('chains', () => {
   const branch = (id: number, tags: Record<string, string>, metresNorth: number) =>
     normalizeOsm({ elements: [element({ id, lat: north(metresNorth).latitude, tags: { amenity: 'fast_food', ...tags } })] })[0];
   const cfaCard = { id: 'card-cfa', stage: 'regular' } as MapRestaurant['card'];
-  const owned = { ...seeded("Chick-fil-A", 4900), card: cfaCard };
+  const owned = { ...seeded("Chick-fil-A", 2900), card: cfaCard };
 
   it('reads brand and brand:wikidata from the tags', () => {
     expect(branch(1, { name: 'Chick-fil-A #12', brand: 'Chick-fil-A', 'brand:wikidata': 'Q491516' }, 100)).toMatchObject({ brand: 'Chick-fil-A', brandWikidata: 'Q491516' });

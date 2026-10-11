@@ -16,5 +16,8 @@ export type CardView = {
     theme: RestaurantTheme;
     heroImagePath: string | null;
     heroImageKind: 'logo' | 'storefront' | 'food' | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    brandKey?: string | null;
   };
 };

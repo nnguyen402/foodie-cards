@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCollection } from '../cards/useCollection';
 import { inDiscoveryArea, type DiscoveryArea } from './discoveryArea';
 import { offlinePlaces } from './offlineSnapshot';
 import { buildMapRestaurants, type MapRestaurant } from './mapRestaurants';
 import { mergeNearby } from './mergeNearby';
-import { createNearbySource } from './nearbySource';
+import { sessionNearby as nearbySource } from './sessionNearby';
 import type { OsmPlace } from './osm';
 
 export type MapRestaurants = {
@@ -21,9 +20,6 @@ export type MapRestaurants = {
 };
 
 export const areaKey = (area: DiscoveryArea | null) => (area ? `${area.centre.latitude},${area.centre.longitude}` : null);
-
-// One client for the whole session, so its cache survives leaving and returning to the tab.
-const nearbySource = createNearbySource({ fetcher: (url, init) => fetch(url, init), storage: AsyncStorage, log: (message) => console.warn(message) });
 
 // The one place the map gets its restaurants from: our catalog merged with the signed-in
 // user's cards, plus nearby places from OpenStreetMap. Nearby places are fetched only when

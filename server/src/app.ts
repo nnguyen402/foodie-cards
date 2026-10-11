@@ -45,6 +45,7 @@ function sendServiceError(res: express.Response, error: unknown) {
   if (code === 'DUPLICATE_RECEIPT' || (error && typeof error === 'object' && 'code' in error && error.code === '23505')) {
     return sendError(res, 409, 'DUPLICATE_RECEIPT', 'This receipt appears to have already been submitted.');
   }
+  if (code === 'RATE_LIMITED') return sendError(res, 429, 'INVALID_REQUEST', 'You have reached the limit for adding new restaurants. Try again later.', true);
   if (code === 'INVALID_REQUEST') return sendError(res, 400, 'INVALID_REQUEST', 'The request could not be accepted.');
   if (code === 'INVALID_RECEIPT') return sendError(res, 400, 'INVALID_RECEIPT', 'The confirmed receipt could not be accepted.');
   if (code === 'FORBIDDEN') return sendError(res, 404, 'NOT_FOUND', 'The requested item was not found.');
@@ -54,6 +55,23 @@ function sendServiceError(res: express.Response, error: unknown) {
 
 function requireService<T extends keyof ServerDependencies>(dependencies: ServerDependencies, key: T): NonNullable<ServerDependencies[T]> | undefined {
   return dependencies[key] as NonNullable<ServerDependencies[T]> | undefined;
+}
+
+function placeNameMatches(receiptName: string | null | undefined, place: { name: string; brandKey?: string }): boolean {
+  if (!receiptName) return false;
+  const normalize = (value: string) => value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('en-US').replace(/#?\b\d+\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+  const receipt = normalize(receiptName);
+  const candidates = [normalize(place.name)].filter(Boolean);
+  const words = (value: string) => [...new Set(value.split(' ').filter(Boolean))];
+  const receiptWords = words(receipt);
+  return !!receipt && candidates.some((candidate) => {
+    if (receipt === candidate) return true;
+    const candidateWords = words(candidate);
+    const overlap = candidateWords.filter((word) => receiptWords.includes(word));
+    const ratio = overlap.length / Math.max(receiptWords.length, candidateWords.length);
+    return overlap.some((word) => word.length >= 3) && ratio >= 0.8;
+  });
 }
 
 export function createApp(
@@ -140,7 +158,8 @@ export function createApp(
     const loadDraft = requireService(dependencies, 'loadReceiptDraft');
     const loadMenu = requireService(dependencies, 'loadRestaurantMenu');
     const accept = requireService(dependencies, 'acceptReceipt');
-    if (!loadDraft || !loadMenu || !accept) return sendError(res, 503, 'CONFIGURATION_ERROR', 'Receipt service is not configured.');
+    const acceptPlace = requireService(dependencies, 'acceptPlaceReceipt');
+    if (!loadDraft || (!input.place && (!loadMenu || !accept)) || (input.place && !acceptPlace)) return sendError(res, 503, 'CONFIGURATION_ERROR', 'Receipt service is not configured.');
 
     try {
       const draft = await loadDraft(userId, input.draftId);
@@ -158,7 +177,16 @@ export function createApp(
         return sendError(res, 409, 'DUPLICATE_RECEIPT', 'This receipt appears to have already been submitted.');
       }
 
-      const menu = await loadMenu(input.restaurantId);
+      if (input.place) {
+        if (!placeNameMatches(draft.restaurantName, input.place)) {
+          return sendError(res, 400, 'INVALID_RECEIPT', 'The receipt does not match the chosen place.');
+        }
+        const result = await acceptPlace!(userId, input.draftId, input.submissionId, input as import('./auth.js').PlaceSubmission);
+        const validResult = progressionResultSchema.safeParse(result);
+        if (!validResult.success || validResult.data.receiptId !== input.draftId) return sendError(res, 503, 'INTERNAL_ERROR', 'Receipt acceptance returned an invalid result.', true);
+        return res.status(200).json(validResult.data);
+      }
+      const menu = await loadMenu!(input.restaurantId!);
       if (!menu || menu.restaurantId !== input.restaurantId) return sendError(res, 422, 'UNSUPPORTED_RESTAURANT', 'Choose a supported restaurant for this receipt.');
       let items: ReturnType<typeof canonicalizeReceiptItems>;
       try {
@@ -173,7 +201,7 @@ export function createApp(
         return sendError(res, 503, 'INTERNAL_ERROR', 'The menu could not be loaded right now.', true);
       }
       const confirmed = { ...input, items } as Parameters<NonNullable<ServerDependencies['acceptReceipt']>>[3];
-      const result = await accept(userId, input.draftId, input.submissionId, confirmed);
+      const result = await accept!(userId, input.draftId, input.submissionId, confirmed);
       const validResult = progressionResultSchema.safeParse(result);
       if (!validResult.success || validResult.data.receiptId !== input.draftId) {
         return sendError(res, 503, 'INTERNAL_ERROR', 'Receipt acceptance returned an invalid result.', true);

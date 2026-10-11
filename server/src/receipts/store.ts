@@ -61,6 +61,7 @@ export function createReceiptDependencies(
       const { data, error } = await supabase
         .from('restaurants')
         .select('id, name, aliases, location_label')
+        .eq('source', 'catalog')
         .order('name', { ascending: true });
       if (error || !data) throw new ReceiptDependencyError('INTERNAL_ERROR', true);
 

@@ -8,7 +8,7 @@ import type { OsmPlace } from './osm';
 // Overpass endpoint is down and nothing has been saved on the device yet. It is a last
 // resort: a live or saved result always wins, and it is never written back to storage.
 // It holds the 200 named places nearest the centre (see coverageMetres in the JSON), not
-// the full 5 km area. Data © OpenStreetMap contributors, ODbL.
+// the full discovery area. Data © OpenStreetMap contributors, ODbL.
 export const OFFLINE_SNAPSHOT = snapshot as { label: string; source: string; osmBase: string; centre: Coordinate; coverageMetres: number; places: OsmPlace[] };
 
 /** Snapshot places inside the discovery area around `centre`; empty anywhere the snapshot does not reach. */

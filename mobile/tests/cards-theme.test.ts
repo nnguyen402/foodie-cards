@@ -13,11 +13,11 @@ describe('card theme helpers', () => {
   });
 
   it('picks the fallback art icon from the restaurant category', () => {
-    expect(cuisineIcon('soul_food')).toBe('coffee');
+    expect(cuisineIcon('soul_food')).toBe('southern');
     expect(cuisineIcon('cafe')).toBe('coffee');
     expect(cuisineIcon('barbecue')).toBe('bbq');
     expect(cuisineIcon('southern')).toBe('southern');
-    expect(cuisineIcon('fast_food')).toBe('burger');
+    expect(cuisineIcon('fast_food')).toBe('plate');
     expect(cuisineIcon('pizza')).toBe('pizza');
   });
 

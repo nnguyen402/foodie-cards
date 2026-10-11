@@ -2,12 +2,13 @@ import { useMemo } from 'react';
 import { Image, StyleSheet, Text, View, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
 import { CardFrame } from './CardFrame';
 import { CardPattern } from './CardPattern';
-import { CuisineIcon } from './CuisineIcon';
+import { CuisineArt } from './CuisineArtView';
+import { cuisineKeyFor, hasCuisineArt, type CuisineKey } from './cuisineArt';
 import { nameFont } from './fonts';
 import { frameRects, type WindowRect } from './frameLayout';
 import { describeProgress } from './progress';
 import { stageLabel } from './stageStyles';
-import { cardInk, cuisineIcon, ratingLabel, ratingSpoken, readableTextOn } from './themes';
+import { cardInk, ratingLabel, ratingSpoken, readableTextOn } from './themes';
 import type { CardView } from './types';
 
 // Below this width the card is a collection thumbnail and shows only the essentials.
@@ -25,6 +26,8 @@ type RestaurantCardProps = {
   heroSource?: ImageSourcePropType;
   /** Preview of a restaurant the user has not collected: no stage, XP or visits are shown. */
   uncollected?: boolean;
+  /** Overrides the cuisine worked out from the name and category, so a screen that already decided one (the map) cannot disagree. */
+  cuisine?: CuisineKey;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -32,9 +35,10 @@ function windowStyle(box: WindowRect, backgroundColor: string): ViewStyle {
   return { position: 'absolute', left: box.x, top: box.y, width: box.w, height: box.h, borderRadius: box.r, backgroundColor, overflow: 'hidden' };
 }
 
-export function RestaurantCard({ card, width, heroSource, uncollected = false, style }: RestaurantCardProps) {
+export function RestaurantCard({ card, width, heroSource, uncollected = false, cuisine: cuisineOverride, style }: RestaurantCardProps) {
   const rects = useMemo(() => frameRects(width), [width]);
   const { restaurant } = card;
+  const cuisine = cuisineOverride ?? cuisineKeyFor({ name: restaurant.name, cuisine: restaurant.category });
   const { theme } = restaurant;
   const compact = width < COMPACT_BELOW;
   const px = (value: number) => value * rects.scale;
@@ -66,15 +70,13 @@ export function RestaurantCard({ card, width, heroSource, uncollected = false, s
         </Text>
       </View>
 
-      <View style={[windowStyle(rects.art, theme.primaryColor), styles.centered]}>
+      <View style={windowStyle(rects.art, theme.primaryColor)}>
         {heroSource ? (
           <Image source={heroSource} resizeMode={restaurant.heroImageKind === 'logo' ? 'contain' : 'cover'} style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
         ) : (
           <>
-            <CardPattern patternKey={theme.patternKey} color={theme.accentColor} width={rects.art.w} height={rects.art.h} scale={rects.scale} />
-            <View style={[styles.centered, { width: px(300), height: px(300), borderRadius: px(150), backgroundColor: theme.accentColor }]}>
-              <CuisineIcon kind={cuisineIcon(restaurant.category)} size={px(190)} color={onAccent} cutout={theme.accentColor} />
-            </View>
+            {hasCuisineArt(cuisine) ? null : <CardPattern patternKey={theme.patternKey} color={theme.accentColor} width={rects.art.w} height={rects.art.h} scale={rects.scale} />}
+            <CuisineArt cuisine={cuisine} variant="card" locked={uncollected} tint={{ background: theme.accentColor, ink: onAccent }} />
           </>
         )}
       </View>

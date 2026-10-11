@@ -45,8 +45,8 @@ describe('discovery area', () => {
   const midtown = { latitude: 33.781, longitude: -84.383 };
   const newYork = { latitude: 40.71, longitude: -74.0 };
 
-  it('is a fixed 5 km circle around the player, wherever they are', () => {
-    expect(DISCOVERY_RADIUS_METRES).toBe(5000);
+  it('is a fixed 3 km circle around the player, wherever they are', () => {
+    expect(DISCOVERY_RADIUS_METRES).toBe(3000);
     expect(discoveryArea(midtown)).toEqual({ centre: midtown, fallback: false });
     expect(discoveryArea(newYork)).toEqual({ centre: newYork, fallback: false });
   });
@@ -55,14 +55,15 @@ describe('discovery area', () => {
     expect(discoveryArea(null)).toEqual({ centre: ATLANTA_DOWNTOWN, fallback: true });
   });
 
-  it('keeps all five seeded restaurants inside the downtown fallback area', () => {
-    for (const coordinate of Object.values(RESTAURANT_COORDINATES)) expect(inDiscoveryArea(coordinate, discoveryArea(null))).toBe(true);
+  it('keeps the three seeded restaurants nearest downtown inside the fallback area; Fox Bros and Antico are further than 3 km', () => {
+    const inside = Object.entries(RESTAURANT_COORDINATES).filter(([, coordinate]) => inDiscoveryArea(coordinate, discoveryArea(null)));
+    expect(inside.map(([id]) => id.slice(-1)).sort()).toEqual(['1', '3', '4']);
   });
 
   it('uses real distance: just inside is in, just outside is out', () => {
     const area = discoveryArea(midtown);
-    expect(inDiscoveryArea({ latitude: midtown.latitude + 0.0440, longitude: midtown.longitude }, area)).toBe(true);
-    expect(inDiscoveryArea({ latitude: midtown.latitude + 0.0460, longitude: midtown.longitude }, area)).toBe(false);
+    expect(inDiscoveryArea({ latitude: midtown.latitude + 0.0265, longitude: midtown.longitude }, area)).toBe(true);
+    expect(inDiscoveryArea({ latitude: midtown.latitude + 0.0275, longitude: midtown.longitude }, area)).toBe(false);
     expect(inDiscoveryArea(RESTAURANT_COORDINATES['10000000-0000-4000-8000-000000000004'], discoveryArea(newYork))).toBe(false);
   });
 
@@ -108,7 +109,19 @@ describe('buildMapRestaurants', () => {
 
   it('splits the location label into neighbourhood and address and picks the icon', () => {
     const [pin] = buildMapRestaurants({ owned: [], locked: [varsity] });
-    expect(pin).toMatchObject({ neighbourhood: 'Downtown', address: '61 North Ave NW', icon: 'burger', category: 'fast_food', theme });
+    expect(pin).toMatchObject({ neighbourhood: 'Downtown', address: '61 North Ave NW', icon: 'plate', cuisine: 'default', category: 'fast_food', theme });
+  });
+
+  it('uses a stored brand key and its own coordinate when the place has them', () => {
+    const stored = { ...place('stored-1', 'Some Chain', 'burger'), brandKey: 'wikidata:Q1', latitude: 33.75, longitude: -84.39 };
+    const [pin] = buildMapRestaurants({ owned: [], locked: [stored] });
+    expect(pin.brandKey).toBe('wikidata:Q1');
+    expect(pin.coordinate).toEqual({ latitude: 33.75, longitude: -84.39 });
+  });
+
+  it('falls back to a name brand key without a stored one', () => {
+    const [pin] = buildMapRestaurants({ owned: [], locked: [{ ...place('stored-2', 'The Varsity', 'fast_food'), latitude: 33.77, longitude: -84.39, brandKey: null }] });
+    expect(pin.brandKey).toBe('name:varsity');
   });
 
   it('leaves out restaurants without coordinates', () => {
@@ -118,14 +131,14 @@ describe('buildMapRestaurants', () => {
 
 describe('pin look', () => {
   it('uses silver, gold and purple-gold for the three stages', () => {
-    expect(pinLook('discovered').ring).toBe('#c9d1dc');
-    expect(pinLook('regular').ring).toBe('#f2b632');
-    expect(pinLook('house_favorite')).toMatchObject({ ring: '#f5c542', glow: '#a45cff', sparkle: true });
+    expect(pinLook('discovered').glow).toBe('#c9d1dc');
+    expect(pinLook('regular').glow).toBe('#f2b632');
+    expect(pinLook('house_favorite')).toMatchObject({ glow: '#a45cff', sparkle: true });
   });
 
   it('dims a locked pin and gives it no glow', () => {
     expect(pinLook(null)).toMatchObject({ glow: null, locked: true, sparkle: false });
-    expect(pinLook(null).opacity).toBeLessThan(1);
+    expect(pinLook(null).opacity).toBe(0.55);
   });
 });
 
@@ -165,11 +178,11 @@ describe('pin motion', () => {
 
 describe('hud', () => {
   it('shows progress through the current level of 200 XP', () => {
-    expect(hudProgress({ accountXP: 350, accountLevel: 2 }, 2, 5)).toEqual({ level: 2, xpIntoLevel: 150, xpPerLevel: 200, fraction: 0.75, xpLabel: '150 / 200 XP', discoveredLabel: '2 / 5 discovered' });
+    expect(hudProgress({ accountXP: 350, accountLevel: 2 }, 2, 5)).toEqual({ level: 2, xpIntoLevel: 150, xpPerLevel: 200, fraction: 0.75, xpLabel: 'Lv 2 · 350 XP · 150/200 to Lv 3', discoveredLabel: '2 / 5 discovered' });
   });
 
   it('starts empty for a new account', () => {
-    expect(hudProgress({ accountXP: 0, accountLevel: 1 }, 0, 5)).toMatchObject({ level: 1, fraction: 0, xpLabel: '0 / 200 XP', discoveredLabel: '0 / 5 discovered' });
+    expect(hudProgress({ accountXP: 0, accountLevel: 1 }, 0, 5)).toMatchObject({ level: 1, fraction: 0, xpLabel: 'Lv 1 · 0 XP · 0/200 to Lv 2', discoveredLabel: '0 / 5 discovered' });
   });
 });
 

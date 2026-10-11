@@ -8,7 +8,7 @@ export type Collection = { owned: CardView[]; locked: CatalogRestaurant[] };
 
 export { toCatalogRestaurant };
 
-export const RESTAURANT_SELECT = 'id,name,location_label,category,theme,hero_image_path,hero_image_kind';
+export const RESTAURANT_SELECT = 'id,name,location_label,category,theme,hero_image_path,hero_image_kind,latitude,longitude,brand_key';
 
 // numeric(2,1) columns can arrive as strings; 0 is a real rating and must not become null.
 export function toRating(value: number | string | null | undefined): number | null {

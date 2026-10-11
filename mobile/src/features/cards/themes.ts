@@ -1,3 +1,5 @@
+import { cuisineIconFor, normalizeCuisine } from './cuisineArt';
+
 // Text colours for a restaurant-coloured panel. Fixed values: a card is its own surface in light and dark mode.
 export const cardInk = { light: '#FFFFFF', dark: '#2B211B' } as const;
 
@@ -13,20 +15,9 @@ export function readableTextOn(hex: string): string {
 
 export type CuisineIconKind = 'coffee' | 'bbq' | 'southern' | 'burger' | 'pizza' | 'sushi' | 'plate';
 
-// Fallback art when a restaurant has no prepared image. Busy Bee Café (soul_food) shows the coffee cup.
-const categoryIcons: Record<string, CuisineIconKind> = {
-  cafe: 'coffee',
-  soul_food: 'coffee',
-  barbecue: 'bbq',
-  southern: 'southern',
-  fast_food: 'burger',
-  pizza: 'pizza',
-  sushi: 'sushi',
-  japanese: 'sushi',
-};
-
+// Fallback art when a restaurant has no prepared image: the icon for its cuisine key (see cuisineArt.ts).
 export function cuisineIcon(category: string): CuisineIconKind {
-  return categoryIcons[category.trim().toLowerCase()] ?? 'plate';
+  return cuisineIconFor(normalizeCuisine(category));
 }
 
 export function ratingLabel(rating: number | null): string {
