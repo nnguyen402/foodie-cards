@@ -1,6 +1,6 @@
 # Team ownership and integration
 
-The complete workflow is incorporated into section 5 of [the build plan](foodie-cards-plan.md). This document is a quick reference; follow the plan if details differ.
+Start with the [product requirements document](PRD.md) for the product goal, demo requirements, and acceptance criteria. The complete workflow is incorporated into section 5 of [the build plan](foodie-cards-plan.md). This document is a quick reference; follow the plan if details differ.
 
 ## Foundation first
 
@@ -47,6 +47,8 @@ If only two feature teammates are available, assign B and C first. A retains int
 5. Assign people to lanes and choose the physical demo phone.
 
 ## Agent workflow
+
+UI teammates should update their branches from main and follow [the shared mobile UI foundation](ui-foundation.md). React Native Reusables, styling configuration, and shared controls are configured once by the integrator. B+C and D use those controls rather than independently initializing or replacing the styling stack. Keep Task A backend work in its separate PR.
 
 - Each teammate uses a separate checkout or worktree and a lane branch.
 - Each teammate's main agent coordinates their subagents and reviews the combined result.
