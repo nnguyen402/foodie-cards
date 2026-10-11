@@ -30,3 +30,11 @@ export function buildCollection(restaurants: RestaurantRow[], cards: CardRow[], 
     .sort((a, b) => a.name.localeCompare(b.name));
   return { owned, locked };
 }
+
+export type DiscoveryProgress = { discovered: number; total: number; fraction: number; label: string };
+
+export function discoveryProgress(collection: { owned: readonly unknown[]; locked: readonly unknown[] }): DiscoveryProgress {
+  const discovered = collection.owned.length;
+  const total = discovered + collection.locked.length;
+  return { discovered, total, fraction: total === 0 ? 0 : discovered / total, label: `${discovered} / ${total} discovered` };
+}

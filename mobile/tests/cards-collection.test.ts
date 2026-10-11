@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCollection, RESTAURANT_SELECT, toCatalogRestaurant, type RestaurantRow } from '../src/features/cards/collection';
+import { buildCollection, discoveryProgress, RESTAURANT_SELECT, toCatalogRestaurant, type RestaurantRow } from '../src/features/cards/collection';
 import type { CardRow } from '../src/features/cards/mapCard';
 
 const restaurant = (id: string, name: string): RestaurantRow => ({
@@ -75,5 +75,25 @@ describe('buildCollection', () => {
 
   it('skips cards without a restaurant', () => {
     expect(buildCollection([varsity], [card('c1', null)], []).owned).toEqual([]);
+  });
+});
+
+describe('discoveryProgress', () => {
+  const owned = (count: number) => Array.from({ length: count }, () => ({}));
+
+  it('counts discovered restaurants out of the whole catalog', () => {
+    expect(discoveryProgress({ owned: owned(2), locked: owned(3) })).toEqual({ discovered: 2, total: 5, fraction: 0.4, label: '2 / 5 discovered' });
+  });
+
+  it('starts at zero for a new account', () => {
+    expect(discoveryProgress({ owned: [], locked: owned(5) })).toEqual({ discovered: 0, total: 5, fraction: 0, label: '0 / 5 discovered' });
+  });
+
+  it('is complete when nothing is locked', () => {
+    expect(discoveryProgress({ owned: owned(5), locked: [] }).fraction).toBe(1);
+  });
+
+  it('does not divide by zero for an empty catalog', () => {
+    expect(discoveryProgress({ owned: [], locked: [] })).toEqual({ discovered: 0, total: 0, fraction: 0, label: '0 / 0 discovered' });
   });
 });

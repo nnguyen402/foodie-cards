@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { BrandHeader } from '@/components/brand-header';
 import { LockedCard } from '@/features/cards/LockedCard';
 import { RestaurantCard } from '@/features/cards/RestaurantCard';
+import { CardBack } from '@/features/cards/reveal/CardBack';
+import { discoveryProgress } from '@/features/cards/collection';
 import { SortControl } from '@/features/cards/SortControl';
 import { sortCards, type CollectionSort } from '@/features/cards/sorting';
 import { usePendingReveal } from '@/features/cards/reveal/usePendingReveal';
@@ -20,6 +22,8 @@ import { colors, radius, spacing } from '@/theme/tokens';
 
 const GRID_GAP = spacing.md;
 const MAX_CARD_WIDTH = 200;
+const FAN_CARD_WIDTH = 84;
+const FAN = [{ rotate: '-12deg', lift: 10 }, { rotate: '0deg', lift: 0 }, { rotate: '12deg', lift: 10 }] as const;
 
 const motionStyle = {
   transform: [{ scale: 1 }],
@@ -86,15 +90,44 @@ export default function CollectionScreen() {
     content = <MessagePanel title="Collection unavailable" body={state.message} kind="error" actionLabel="Try again" onAction={() => void refresh()} />;
   } else {
     const { locked } = state.collection;
+    const progress = discoveryProgress(state.collection);
     content = (
       <>
+        {progress.total > 0 ? (
+          <View
+            accessible
+            accessibilityRole="progressbar"
+            accessibilityLabel={`${progress.discovered} of ${progress.total} restaurants discovered`}
+            accessibilityValue={{ min: 0, max: progress.total, now: progress.discovered }}
+            style={styles.meter}
+          >
+            <View style={styles.sectionHeading}>
+              <AppText variant="small" strong>{progress.label}</AppText>
+              <AppText variant="caption" muted>{progress.discovered === progress.total ? 'Set complete' : 'Atlanta set'}</AppText>
+            </View>
+            <View style={styles.meterTrack}>
+              <View style={[styles.meterFill, { width: `${Math.round(progress.fraction * 100)}%` }]} />
+            </View>
+          </View>
+        ) : null}
         <View style={styles.section}>
           <View style={styles.sectionHeading}><AppText variant="heading" strong>Your cards</AppText><AppText variant="small" muted>{owned.length}</AppText></View>
           {owned.length === 0 ? (
             <View style={styles.empty}>
-              <View style={styles.emptyStamp}><AppText variant="title" strong style={styles.emptyMark}>01</AppText></View>
-              <AppText variant="heading" strong>Your first card starts here.</AppText>
-              <AppText muted>When you scan and confirm a restaurant receipt, your first visit will appear in this collection.</AppText>
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.fan}>
+                {FAN.map((card, index) => (
+                  <View key={card.rotate} style={[styles.fanCard, { marginLeft: index === 0 ? 0 : -FAN_CARD_WIDTH * 0.35, marginTop: card.lift, zIndex: index === 1 ? 1 : 0, transform: [{ rotate: card.rotate }] }]}>
+                    <CardBack width={FAN_CARD_WIDTH} />
+                  </View>
+                ))}
+              </View>
+              <AppText variant="heading" strong style={styles.emptyText}>Your first pack is waiting</AppText>
+              <AppText muted style={styles.emptyText}>
+                {locked.length > 0
+                  ? `${locked.length} Atlanta ${locked.length === 1 ? 'restaurant is' : 'restaurants are'} face down below. Scan a receipt from one to open its card.`
+                  : 'Scan a restaurant receipt to open your first card.'}
+              </AppText>
+              <Button label="Scan a receipt" onPress={() => router.push('/scan')} />
             </View>
           ) : (
             <>
@@ -162,7 +195,11 @@ const styles = StyleSheet.create({
   section: { gap: spacing.md },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
+  meter: { gap: spacing.sm, padding: spacing.lg, backgroundColor: colors.surface, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border },
+  meterTrack: { height: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted, overflow: 'hidden' },
+  meterFill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.accent },
   empty: { padding: spacing.xl, gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border },
-  emptyStamp: { height: 52, width: 52, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: colors.accentSoft },
-  emptyMark: { color: colors.accent },
+  fan: { flexDirection: 'row', justifyContent: 'center', paddingVertical: spacing.md },
+  fanCard: { boxShadow: '0 6px 14px rgba(0,0,0,0.25)', borderRadius: spacing.sm },
+  emptyText: { textAlign: 'center' },
 });
