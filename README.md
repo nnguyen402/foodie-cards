@@ -6,6 +6,7 @@ A mobile dining journal where confirmed receipts unlock and evolve personal rest
 
 The foundation code checkpoint includes Expo mobile authentication and native tab shells, an Express backend, shared validated contracts, and a Supabase schema with private storage and access rules. Real iPhone authentication checks remain pending. Receipt extraction and reward progression are the next milestone. This baseline does not award fixture progress.
 
+- [Product requirements document — start here](docs/PRD.md)
 - [Full build plan and product rules](docs/foodie-cards-plan.md)
 - [Team ownership and integration workflow](docs/team-workflow.md)
 - [Local setup, Supabase configuration, and iPhone checks](docs/setup.md)

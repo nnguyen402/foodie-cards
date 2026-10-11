@@ -12,7 +12,7 @@
 
 **Prize priorities:** Creative track first, Best Use of Gemini API second, GoDaddy domain side quest third. No restaurant-owner dashboard, Photon agent, or Replit Small Business challenge in the initial scope. Replit is the initial build environment and backend host.
 
-**Status:** Planning baseline published at https://github.com/nnguyen402/foodie-cards. Ready for foundation implementation and team handoff; application implementation has not started. The numbers and technical defaults below are proposed implementation defaults, selected to remove ambiguity; they can be tuned after the complete flow works.
+**Status:** Foundation implemented and published to `main`; physical iPhone verification remains pending. Feature lanes can start against shared contracts and labeled fixtures. See the [PRD](PRD.md) for the teammate-facing product requirements and [checkpoint handoff](checkpoint-handoff.md) for actual implementation/verification status; historical task checkboxes below are not a current completion ledger. The numbers and technical defaults below are the agreed starting defaults; changes must be coordinated across the PRD, rules, and shared contracts.
 
 ## 1. Product brief
 

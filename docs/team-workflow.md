@@ -1,6 +1,6 @@
 # Team ownership and integration
 
-The complete workflow is incorporated into section 5 of [the build plan](foodie-cards-plan.md). This document is a quick reference; follow the plan if details differ.
+Start with the [product requirements document](PRD.md) for the product goal, demo requirements, and acceptance criteria. The complete workflow is incorporated into section 5 of [the build plan](foodie-cards-plan.md). This document is a quick reference; follow the plan if details differ.
 
 ## Foundation first
 
