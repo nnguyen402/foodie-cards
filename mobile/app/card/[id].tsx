@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { AppText } from '@/components/ui/app-text';
 import { MessagePanel } from '@/components/ui/message-panel';
 import { formatCalendarDate } from '@/features/cards/detail';
 import { RestaurantCard } from '@/features/cards/RestaurantCard';
+import { RarityLabel, SpinCard } from '@/features/cards/SpinCard';
 import { cuisineKeyFor } from '@/features/cards/cuisineArt';
 import { abilityLine } from '@/features/map/labels';
 import { nextStageGoal, stageLabel } from '@/features/cards/stageStyles';
@@ -45,6 +47,7 @@ export default function CardDetailScreen() {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
   const { state, refresh } = useCardDetail(id ?? '');
+  const [spins, setSpins] = useState(0);
   const cardWidth = Math.min(windowWidth - 2 * spacing.page, 360);
   const title = state.status === 'ready' ? state.detail.card.restaurant.name : '';
 
@@ -61,9 +64,18 @@ export default function CardDetailScreen() {
     const visitText = (count: number) => `${count} ${count === 1 ? 'visit' : 'visits'}`;
     content = (
       <>
-        <View style={styles.cardWrap}><RestaurantCard card={card} width={cardWidth} /></View>
+        <View style={styles.cardWrap}>
+          <SpinCard
+            width={cardWidth}
+            accessibilityLabel={`${card.restaurant.name}, ${stageLabel(card.stage)} card`}
+            accessibilityHint="Turns the card around."
+            onSpin={() => setSpins((count) => count + 1)}
+          >
+            <RestaurantCard card={card} width={cardWidth} />
+          </SpinCard>
+        </View>
         <View style={styles.rarity}>
-          <AppText strong>{stageLabel(card.stage)}</AppText>
+          <RarityLabel stage={card.stage} playKey={spins} />
           <AppText variant="small" muted>{abilityLine(cuisineKeyFor({ name: card.restaurant.name, cuisine: card.restaurant.category }))}</AppText>
         </View>
 
