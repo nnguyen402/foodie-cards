@@ -17,12 +17,16 @@ type MessagePanelProps = {
   bodyStyle?: StyleProp<TextStyle>;
   /** Drawn to the left of the title and body. */
   icon?: ReactNode;
+  /** Optional overrides for the action button and the loading spinner. */
+  actionStyle?: StyleProp<ViewStyle>;
+  actionTextStyle?: StyleProp<TextStyle>;
+  indicatorColor?: string;
 };
 
-export function MessagePanel({ title, body, kind = 'plain', loading = false, actionLabel, onAction, style, titleStyle, bodyStyle, icon }: MessagePanelProps) {
+export function MessagePanel({ title, body, kind = 'plain', loading = false, actionLabel, onAction, style, titleStyle, bodyStyle, icon, actionStyle, actionTextStyle, indicatorColor }: MessagePanelProps) {
   return (
     <View style={[styles.panel, kind === 'error' ? styles.errorPanel : undefined, style]}>
-      {loading ? <ActivityIndicator color={colors.accent} /> : null}
+      {loading ? <ActivityIndicator color={indicatorColor ?? colors.accent} /> : null}
       {icon ? (
         <View style={styles.iconRow}>
           {icon}
@@ -37,7 +41,7 @@ export function MessagePanel({ title, body, kind = 'plain', loading = false, act
           <AppText muted style={[styles.body, bodyStyle]}>{body}</AppText>
         </>
       )}
-      {actionLabel && onAction ? <Button label={actionLabel} variant="secondary" onPress={onAction} /> : null}
+      {actionLabel && onAction ? <Button label={actionLabel} variant="secondary" onPress={onAction} style={actionStyle} textStyle={actionTextStyle} /> : null}
     </View>
   );
 }
