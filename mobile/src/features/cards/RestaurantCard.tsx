@@ -3,7 +3,7 @@ import { Image, StyleSheet, Text, View, type ImageSourcePropType, type StyleProp
 import { CardFrame } from './CardFrame';
 import { CardPattern } from './CardPattern';
 import { CuisineIcon } from './CuisineIcon';
-import { cuisineIconFor, cuisineKeyFor, getCuisineArt } from './cuisineArt';
+import { cuisineIconFor, cuisineKeyFor, getCuisineCardArt } from './cuisineArt';
 import { nameFont } from './fonts';
 import { frameRects, type WindowRect } from './frameLayout';
 import { describeProgress } from './progress';
@@ -29,6 +29,9 @@ type RestaurantCardProps = {
   style?: StyleProp<ViewStyle>;
 };
 
+// Over the art of a card that is not collected yet.
+const LOCKED_DIM = 'rgba(18,14,11,0.45)';
+
 function windowStyle(box: WindowRect, backgroundColor: string): ViewStyle {
   return { position: 'absolute', left: box.x, top: box.y, width: box.w, height: box.h, borderRadius: box.r, backgroundColor, overflow: 'hidden' };
 }
@@ -37,7 +40,7 @@ export function RestaurantCard({ card, width, heroSource, uncollected = false, s
   const rects = useMemo(() => frameRects(width), [width]);
   const { restaurant } = card;
   const cuisine = cuisineKeyFor(restaurant);
-  const cuisineArt = getCuisineArt(cuisine);
+  const cuisineArt = getCuisineCardArt(cuisine);
   const { theme } = restaurant;
   const compact = width < COMPACT_BELOW;
   const px = (value: number) => value * rects.scale;
@@ -72,15 +75,17 @@ export function RestaurantCard({ card, width, heroSource, uncollected = false, s
       <View style={[windowStyle(rects.art, theme.primaryColor), styles.centered]}>
         {heroSource ? (
           <Image source={heroSource} resizeMode={restaurant.heroImageKind === 'logo' ? 'contain' : 'cover'} style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
+        ) : cuisineArt ? (
+          <>
+            {/* Edge to edge, clipped by the window's rounded corners. Not collected: dimmed, still the full picture. */}
+            <Image source={cuisineArt} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
+            {uncollected ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: LOCKED_DIM }]} /> : null}
+          </>
         ) : (
           <>
             <CardPattern patternKey={theme.patternKey} color={theme.accentColor} width={rects.art.w} height={rects.art.h} scale={rects.scale} />
-            <View style={[styles.centered, { width: px(300), height: px(300), borderRadius: px(150), backgroundColor: theme.accentColor, overflow: 'hidden' }]}>
-              {cuisineArt ? (
-                <Image source={cuisineArt} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
-              ) : (
-                <CuisineIcon kind={cuisineIconFor(cuisine)} size={px(190)} color={onAccent} cutout={theme.accentColor} />
-              )}
+            <View style={[styles.centered, { width: px(300), height: px(300), borderRadius: px(150), backgroundColor: theme.accentColor }]}>
+              <CuisineIcon kind={cuisineIconFor(cuisine)} size={px(190)} color={onAccent} cutout={theme.accentColor} />
             </View>
           </>
         )}

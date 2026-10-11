@@ -82,23 +82,31 @@ export function cuisineColors(key: CuisineKey): CuisineColors {
   return COLORS[key];
 }
 
-// Illustrations that exist in mobile/assets/cuisine/. Add a line when a file is committed.
-// Loaders, not values, so the images are only required where the app (Metro) asks for them.
-const ART: Partial<Record<CuisineKey, () => ImageSourcePropType>> = {
-  pizza: () => require('../../../assets/cuisine/pizza.png'),
-  asian: () => require('../../../assets/cuisine/asian.png'),
-  breakfast: () => require('../../../assets/cuisine/breakfast.png'),
-  coffee: () => require('../../../assets/cuisine/coffee.png'),
-  chicken: () => require('../../../assets/cuisine/chicken.png'),
-  southern: () => require('../../../assets/cuisine/southern.png'),
-  seafood: () => require('../../../assets/cuisine/seafood.png'),
+// Illustrations that exist in mobile/assets/cuisine/. Each cuisine has two files: a 320px PNG
+// for the round map tokens and a wider <key>-card.jpg (720px, cropped to the card's art
+// window) for the card. Add both when a new one is committed. Loaders, not values, so the
+// images are only required where the app (Metro) asks for them.
+type Art = { token: () => ImageSourcePropType; card: () => ImageSourcePropType };
+const ART: Partial<Record<CuisineKey, Art>> = {
+  pizza: { token: () => require('../../../assets/cuisine/pizza.png'), card: () => require('../../../assets/cuisine/pizza-card.jpg') },
+  asian: { token: () => require('../../../assets/cuisine/asian.png'), card: () => require('../../../assets/cuisine/asian-card.jpg') },
+  breakfast: { token: () => require('../../../assets/cuisine/breakfast.png'), card: () => require('../../../assets/cuisine/breakfast-card.jpg') },
+  coffee: { token: () => require('../../../assets/cuisine/coffee.png'), card: () => require('../../../assets/cuisine/coffee-card.jpg') },
+  chicken: { token: () => require('../../../assets/cuisine/chicken.png'), card: () => require('../../../assets/cuisine/chicken-card.jpg') },
+  southern: { token: () => require('../../../assets/cuisine/southern.png'), card: () => require('../../../assets/cuisine/southern-card.jpg') },
+  seafood: { token: () => require('../../../assets/cuisine/seafood.png'), card: () => require('../../../assets/cuisine/seafood-card.jpg') },
 };
 
 export function hasCuisineArt(key: CuisineKey): boolean {
   return ART[key] !== undefined;
 }
 
-/** The prepared image for a cuisine, or null to fall back to the drawn icon. */
+/** The round-token image for a cuisine, or null to fall back to the drawn icon. */
 export function getCuisineArt(key: CuisineKey): ImageSourcePropType | null {
-  return ART[key]?.() ?? null;
+  return ART[key]?.token() ?? null;
+}
+
+/** The card-window image for a cuisine, or null to fall back to the drawn icon. */
+export function getCuisineCardArt(key: CuisineKey): ImageSourcePropType | null {
+  return ART[key]?.card() ?? null;
 }
