@@ -29,6 +29,11 @@ describe('shared API contracts', () => {
     expect(ratingSchema.parse(null)).toBeNull();
     expect(ratingSchema.parse(0)).toBe(0);
     expect(ratingSchema.safeParse(1.25).success).toBe(false);
+    expect(ratingSchema.safeParse(4.3).success).toBe(true);
+    expect(ratingSchema.safeParse(0.1).success).toBe(true);
+    expect(ratingSchema.safeParse(4.35).success).toBe(false);
+    expect(ratingSchema.safeParse(5.1).success).toBe(false);
+    expect(ratingSchema.safeParse(-0.1).success).toBe(false);
   });
 
   it('accepts only editable profile fields', () => {

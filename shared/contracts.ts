@@ -153,7 +153,7 @@ export type EquipTitleRequest = z.infer<typeof equipTitleRequestSchema>;
 export const equipTitleResponseSchema = z.object({ equippedTitleKey: z.string().min(1).nullable() });
 export type EquipTitleResponse = z.infer<typeof equipTitleResponseSchema>;
 
-export const ratingSchema = z.number().min(0).max(5).refine((value) => Number.isInteger(value * 2), 'Rating must use half-star increments').nullable();
+export const ratingSchema = z.number().min(0).max(5).refine((value) => Math.round(value * 10) / 10 === value, 'Rating must have at most one decimal place').nullable();
 export const reviewRequestSchema = z.object({
   rating: ratingSchema,
   text: z.string().max(500).refine((value) => value.length === 0 || value.trim().length > 0, 'Review text cannot be whitespace only'),
