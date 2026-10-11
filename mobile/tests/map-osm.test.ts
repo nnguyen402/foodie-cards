@@ -110,23 +110,28 @@ describe('mergeNearby', () => {
 
 describe('nearby source', () => {
   const body = { elements: [element({ id: 5 })] };
-  const ok = () => Promise.resolve({ ok: true, status: 200, headers: { get: () => null }, json: () => Promise.resolve(body) });
-  const setup = (responses: (() => Promise<unknown>)[]) => {
+  const reply = (status: number) => () => Promise.resolve({ ok: status === 200, status, headers: { get: () => null }, json: () => Promise.resolve(body) });
+  const ok = reply(200);
+  const down = () => Promise.reject(new Error('offline'));
+  const setup = (responses: (() => Promise<unknown>)[], saved: Record<string, string> = {}) => {
     let clock = 0;
     const calls: { url: string; init: { headers: Record<string, string>; body: string } }[] = [];
+    const logs: string[] = [];
     const fetcher = (url: string, init: { headers: Record<string, string>; body: string }) => {
       calls.push({ url, init });
       return (responses[calls.length - 1] ?? ok)();
     };
-    const source = createNearbySource({ fetcher: fetcher as never, now: () => clock });
-    return { source, calls, advance: (ms: number) => { clock += ms; } };
+    const storage = { getItem: async (key: string) => saved[key] ?? null, setItem: async (key: string, value: string) => { saved[key] = value; } };
+    const make = () => createNearbySource({ fetcher: fetcher as never, now: () => clock, storage, sleep: async () => {}, log: (message) => logs.push(message) });
+    return { source: make(), make, calls, logs, saved, advance: (ms: number) => { clock += ms; } };
   };
+  const hosts = (calls: { url: string }[]) => calls.map((call) => call.url.split('/')[2]);
 
   it('sends one polite request and returns normalised places', async () => {
     const { source, calls } = setup([ok]);
     const places = await source.load(suwanee);
     expect(places.map((place) => place.key)).toEqual(['osm:node/5']);
-    expect(calls).toHaveLength(1);
+    expect(hosts(calls)).toEqual(['overpass-api.de']);
     expect(calls[0].init.headers['User-Agent']).toMatch(/FoodieCards/);
     expect(decodeURIComponent(calls[0].init.body)).toContain('around:5000');
   });
@@ -153,22 +158,68 @@ describe('nearby source', () => {
     expect(calls).toHaveLength(3);
   });
 
-  it('backs off after a 429 instead of retrying straight away', async () => {
-    const limited = () => Promise.resolve({ ok: false, status: 429, headers: { get: () => null }, json: () => Promise.resolve({}) });
-    const { source, calls, advance } = setup([limited, ok]);
-    await expect(source.load(suwanee)).rejects.toBeInstanceOf(OverpassError);
-    await expect(source.load(suwanee)).rejects.toMatchObject({ reason: 'rate-limited' });
-    expect(calls).toHaveLength(1);
-    advance(61 * 1000);
+  it('moves on to the next mirror when one is rate limited or down, and logs why', async () => {
+    const { source, calls, logs } = setup([reply(429), down, ok]);
     await expect(source.load(suwanee)).resolves.toHaveLength(1);
-    expect(calls).toHaveLength(2);
+    expect(hosts(calls)).toEqual(['overpass-api.de', 'overpass.kumi.systems', 'overpass.private.coffee']);
+    expect(logs).toEqual(['[nearby] overpass-api.de failed: HTTP 429', '[nearby] overpass.kumi.systems failed: offline']);
   });
 
-  it('reports a network failure without caching it', async () => {
-    const down = () => Promise.reject(new Error('offline'));
-    const { source, calls } = setup([down, ok]);
-    await expect(source.load(suwanee)).rejects.toMatchObject({ reason: 'failed' });
+  it('rests a rate-limited endpoint for a minute and goes straight to the next one', async () => {
+    const { source, calls, advance } = setup([reply(429), ok, ok, ok]);
+    await source.load(suwanee);
+    advance(30 * 1000);
+    await source.load({ latitude: 33.749, longitude: -84.388 });
+    expect(hosts(calls)).toEqual(['overpass-api.de', 'overpass.kumi.systems', 'overpass.kumi.systems']);
+    advance(61 * 1000);
+    await source.load({ latitude: 40.71, longitude: -74.0 });
+    expect(hosts(calls).at(-1)).toBe('overpass-api.de');
+  });
+
+  it('fails with the last reason when every mirror fails, and does not cache the failure', async () => {
+    const { source, calls, logs } = setup([reply(500), down, reply(504), ok]);
+    await expect(source.load(suwanee)).rejects.toBeInstanceOf(OverpassError);
+    expect(logs).toHaveLength(3);
+    expect(logs[0]).toContain('HTTP 500');
     await expect(source.load(suwanee)).resolves.toHaveLength(1);
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(4);
+  });
+
+  it('does not ask at all while every endpoint is resting', async () => {
+    const { source, calls, logs } = setup([reply(429), reply(429), reply(429)]);
+    await expect(source.load(suwanee)).rejects.toMatchObject({ reason: 'rate-limited' });
+    await expect(source.load(suwanee)).rejects.toMatchObject({ reason: 'rate-limited' });
+    expect(calls).toHaveLength(3);
+    expect(logs.at(-1)).toContain('resting');
+  });
+
+  it('saves the last good result and restores it after a reload without a request', async () => {
+    const { source, make, calls } = setup([ok]);
+    await source.load(suwanee);
+    await Promise.resolve();
+    const reloaded = make();
+    const restored = await reloaded.restore(suwanee);
+    expect(restored).toMatchObject({ fresh: true });
+    expect(restored?.places.map((place) => place.key)).toEqual(['osm:node/5']);
+    await reloaded.load(suwanee);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('still offers a saved result that is old or from a little way off, but marks it stale', async () => {
+    const { source, make, advance } = setup([ok]);
+    await source.load(suwanee);
+    await Promise.resolve();
+    expect(await make().restore(north(800))).toMatchObject({ fresh: false });
+    advance(2 * 60 * 60 * 1000);
+    expect(await make().restore(suwanee)).toMatchObject({ fresh: false });
+  });
+
+  it('ignores a saved result from somewhere else, or one that cannot be read', async () => {
+    const { source, make, saved } = setup([ok]);
+    await source.load(suwanee);
+    await Promise.resolve();
+    expect(await make().restore({ latitude: 33.749, longitude: -84.388 })).toBeNull();
+    for (const key of Object.keys(saved)) saved[key] = '{broken';
+    expect(await make().restore(suwanee)).toBeNull();
   });
 });

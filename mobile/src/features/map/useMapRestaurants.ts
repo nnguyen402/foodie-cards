@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCollection } from '../cards/useCollection';
 import type { DiscoveryArea } from './discoveryArea';
 import { buildMapRestaurants, type MapRestaurant } from './mapRestaurants';
@@ -17,7 +18,7 @@ export type MapRestaurants = {
 };
 
 // One client for the whole session, so its cache survives leaving and returning to the tab.
-const nearbySource = createNearbySource({ fetcher: (url, init) => fetch(url, init) });
+const nearbySource = createNearbySource({ fetcher: (url, init) => fetch(url, init), storage: AsyncStorage, log: (message) => console.warn(message) });
 
 // The one place the map gets its restaurants from: our catalog merged with the signed-in
 // user's cards, plus nearby places from OpenStreetMap. Nearby places are fetched only when
@@ -31,7 +32,7 @@ export function useMapRestaurants(area: DiscoveryArea | null): MapRestaurants {
   const latitude = area?.centre.latitude;
   const longitude = area?.centre.longitude;
 
-  const loadNearby = useCallback(() => {
+  const loadNearby = useCallback(async () => {
     if (latitude === undefined || longitude === undefined) return;
     const centre = { latitude, longitude };
     const token = ++request.current;
@@ -41,22 +42,25 @@ export function useMapRestaurants(area: DiscoveryArea | null): MapRestaurants {
       setNearby('ready');
       return;
     }
-    // Places already on screen stay there while the new area loads; out-of-range ones are filtered by the merge.
+    // Whatever is already on screen stays there while loading and after a failure; the merge
+    // drops anything outside the area. The last result saved on the device fills in first.
     setNearby('loading');
-    nearbySource.load(centre).then(
-      (loaded) => {
-        if (token !== request.current) return;
-        setPlaces(loaded);
-        setNearby('ready');
-      },
-      () => {
-        if (token === request.current) setNearby('failed');
-      },
-    );
+    const restored = await nearbySource.restore(centre);
+    if (token !== request.current) return;
+    if (restored) setPlaces(restored.places);
+    if (restored?.fresh) return setNearby('ready');
+    try {
+      const loaded = await nearbySource.load(centre);
+      if (token !== request.current) return;
+      setPlaces(loaded);
+      setNearby('ready');
+    } catch {
+      if (token === request.current) setNearby('failed');
+    }
   }, [latitude, longitude]);
 
   useEffect(() => {
-    loadNearby();
+    void loadNearby();
     return () => { request.current += 1; };
   }, [loadNearby]);
 
@@ -64,5 +68,5 @@ export function useMapRestaurants(area: DiscoveryArea | null): MapRestaurants {
   const restaurants = useMemo(() => (area ? mergeNearby(catalog, places, area) : []), [catalog, places, area]);
   const error = useMemo(() => (state.status === 'error' ? { message: state.message, retry: () => void refresh() } : null), [state, refresh]);
 
-  return { loading: state.status === 'loading', error, restaurants, nearby, retryNearby: loadNearby };
+  return { loading: state.status === 'loading', error, restaurants, nearby, retryNearby: () => void loadNearby() };
 }
