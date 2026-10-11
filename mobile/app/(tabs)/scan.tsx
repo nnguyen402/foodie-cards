@@ -12,7 +12,7 @@ import { colors, radius, spacing } from '@/theme/tokens';
 import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
 import { createReceiptApi, type ReceiptImageUpload } from '@/features/receipts/receipt-api';
-import { prepareWebReceiptBlob } from '@/features/receipts/receipt-image';
+import { nativeReceiptPart, prepareWebReceiptBlob } from '@/features/receipts/receipt-image';
 import { createReceiptFlowState } from '@/features/receipts/receipt-state';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -51,7 +51,8 @@ async function prepareReceiptImage(asset: ImagePicker.ImagePickerAsset): Promise
   const file = new File(image.uri);
   if (!file.exists || file.size <= 0) throw new Error('The edited image could not be opened. Choose the receipt again.');
   if (file.size > MAX_IMAGE_BYTES) throw new Error('This receipt image is still over 10 MB after compression. Choose another photo.');
-  return { uri: image.uri, name: `receipt-${timestamp}.jpg`, type: 'image/jpeg', previewUri: image.uri };
+  const name = `receipt-${timestamp}.jpg`;
+  return { uri: image.uri, name, type: 'image/jpeg', file: nativeReceiptPart(file, name, 'image/jpeg'), previewUri: image.uri };
 }
 
 export default function ScanScreen() {

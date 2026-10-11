@@ -29,3 +29,12 @@ export async function prepareWebReceiptBlob(uri: string, fetcher: typeof fetch =
   }
   return image.type === imageType ? image : new Blob([image], { type: imageType });
 }
+
+/**
+ * The upload part for a photo on iOS and Android. Expo's `fetch` cannot send React Native's old
+ * `{ uri, name, type }` form-data object ("Unsupported FormDataPart implementation"); it takes a
+ * file-like part with a name, a type and `bytes()`, which this builds from the edited image file.
+ */
+export function nativeReceiptPart(file: { bytes(): Promise<Uint8Array> }, name: string, type: string): Blob {
+  return { name, type, bytes: () => file.bytes() } as unknown as Blob;
+}
