@@ -8,7 +8,7 @@ import { bannerCuisine } from '../src/features/map/bannerCuisine';
 describe('vintage theme tokens', () => {
   it('uses the agreed palette', () => {
     expect(vintage).toEqual({
-      deepRed: '#6B1414', crimson: '#8E1B1B', rust: '#B5482E', gold: '#D4A84B', cream: '#F3E6CF', ink: '#141212', sage: '#4E6B4A',
+      deepRed: '#6B1414', crimson: '#8E1B1B', rust: '#B5482E', rustText: '#D0664A', gold: '#D4A84B', cream: '#F3E6CF', ink: '#141212', sage: '#4E6B4A',
     });
   });
 
