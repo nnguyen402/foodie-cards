@@ -3,16 +3,13 @@ import { submitReview } from '../src/features/reviews/api';
 import {
   clearDraftRating,
   createReviewDraft,
-  ratingValues,
   reviewPayload,
   updateDraftRating,
 } from '../src/features/reviews/model';
 
 describe('review ratings', () => {
-  it('offers every half-star value from zero through five', () => {
-    expect(ratingValues).toEqual([
-      0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5,
-    ]);
+  it('accepts any value from 0.0 to 5.0 with one decimal', () => {
+    for (const rating of [0, 0.1, 2.5, 4.3, 4.7, 5]) expect(updateDraftRating(createReviewDraft(), rating).rating).toBe(rating);
   });
 
   it('keeps zero distinct from unrated and can clear a rating', () => {
@@ -23,8 +20,9 @@ describe('review ratings', () => {
     expect(cleared.rating).toBeNull();
   });
 
-  it('rejects ratings outside half-star steps', () => {
-    expect(() => updateDraftRating(createReviewDraft(), 4.2)).toThrow();
+  it('rejects ratings with more than one decimal or outside 0 to 5', () => {
+    expect(() => updateDraftRating(createReviewDraft(), 4.25)).toThrow();
+    expect(() => updateDraftRating(createReviewDraft(), -0.1)).toThrow();
     expect(() => updateDraftRating(createReviewDraft(), 5.5)).toThrow();
   });
 });

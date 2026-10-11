@@ -6,10 +6,6 @@ import {
 
 export type ReviewDraft = ReviewRequest;
 
-export const ratingValues = [
-  0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5,
-] as const;
-
 export function createReviewDraft(
   rating: ReviewRequest['rating'] = null,
   text = '',
@@ -39,5 +35,5 @@ export function reviewValidationMessage(draft: ReviewDraft): string | null {
   if (draft.text.length > 0 && draft.text.trim().length === 0) {
     return 'Write a review or leave the review field empty.';
   }
-  return 'Choose a rating from 0 to 5 in half-star steps.';
+  return 'Enter a rating from 0.0 to 5.0 with one decimal.';
 }
