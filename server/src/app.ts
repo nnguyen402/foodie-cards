@@ -68,6 +68,18 @@ function placeNameMatches(receiptName: string | null | undefined, place: { name:
   return !!receipt && candidates.some((candidate) => {
     if (receipt === candidate) return true;
     const candidateWords = words(candidate);
+    const receiptTokens = receipt.split(' ');
+    const candidateTokens = candidate.split(' ');
+    let prefix = '';
+    let prefixWords = 0;
+    for (let index = 0; index < Math.min(receiptTokens.length, candidateTokens.length); index++) {
+      if (receiptTokens[index] !== candidateTokens[index]) break;
+      prefix += receiptTokens[index];
+      prefixWords++;
+    }
+    // A complete multi-word brand prefix may be followed by a branch/city or a food descriptor.
+    // Single common words ("Bell", "Taco") still cannot identify a restaurant.
+    if (prefixWords >= 2 && prefix.length >= 6) return true;
     const overlap = candidateWords.filter((word) => receiptWords.includes(word));
     const ratio = overlap.length / Math.max(receiptWords.length, candidateWords.length);
     return overlap.some((word) => word.length >= 3) && ratio >= 0.8;

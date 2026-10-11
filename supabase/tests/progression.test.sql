@@ -147,11 +147,11 @@ insert into review_test_results select 'edited', public.save_review('a0000000-00
 select is((select result->'newBadges' from review_test_results where result_key='edited'), '[]'::jsonb, 'editing a review with a negative rating awards nothing again');
 select is((select account_xp from public.profiles where id='a0000000-0000-4000-8000-000000000001'), 200, 'review edits never increase account XP after the one-time award');
 select throws_ok($invalid_rating$
-  select public.save_review('a0000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001',4.2,'Invalid precision')
-$invalid_rating$, 'P0001', 'INVALID_REQUEST: rating must be between 0 and 5 in half-star steps', '4.2-star ratings are rejected');
+  select public.save_review('a0000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001',4.25,'Invalid precision')
+$invalid_rating$, 'P0001', 'INVALID_REQUEST: rating must be between 0 and 5 with at most one decimal place', 'ratings with excess precision are rejected');
 select throws_ok($high_rating$
   select public.save_review('a0000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001',5.5,'Too high')
-$high_rating$, 'P0001', 'INVALID_REQUEST: rating must be between 0 and 5 in half-star steps', 'ratings above five are rejected');
+$high_rating$, 'P0001', 'INVALID_REQUEST: rating must be between 0 and 5 with at most one decimal place', 'ratings above five are rejected');
 select throws_ok($locked_review$
   select public.save_review('a0000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000002',3,'No card')
 $locked_review$, 'P0001', 'FORBIDDEN: restaurant card required', 'reviewing a restaurant without an owned card is rejected');

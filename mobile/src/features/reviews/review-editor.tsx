@@ -166,7 +166,7 @@ function ReviewForm({
       <View style={styles.heading}>
         <AppText variant="heading" strong>Your rating</AppText>
         <AppText variant="small" muted>
-          Ratings can use half-star steps. A written review is optional.
+          Ratings can use one decimal place. A written review is optional.
         </AppText>
       </View>
       <RatingInput

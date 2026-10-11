@@ -279,7 +279,11 @@ function ConfirmReceiptContent({ auth, userId, draftId, unlock: unlockParam }: {
   </VintageScreen>;
 
   return <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><VintageScreen {...reviewTitle} keyboardShouldPersistTaps="handled">
-    {draft?.warnings.map((warning, index) => <MessagePanel key={`${index}-${warning}`} title="Please review" body={warning} {...kit.notice('plain')} />)}
+    {draft?.warnings.filter((warning) => {
+      if (warning === 'Choose a supported restaurant before confirming this receipt.') return !chosen;
+      if (warning === 'Receipt date is missing or unreadable; check the image before confirming.') return !validDate(receiptDate);
+      return true;
+    }).map((warning, index) => <MessagePanel key={`${index}-${warning}`} title="Please review" body={warning === 'Choose a supported restaurant before confirming this receipt.' ? 'Choose the restaurant shown on this receipt.' : warning} {...kit.notice('plain')} />)}
     <View style={styles.card}><Text allowFontScaling accessibilityRole="header" style={[styles.section, kit.font('display')]}>Restaurant</Text><Text allowFontScaling style={[styles.muted, kit.font('body')]}>{draft?.restaurantName ? `Detected: ${draft.restaurantName}` : 'Choose the restaurant printed on your receipt.'}</Text>
       {!pickReady ? <View style={styles.row}><ActivityIndicator color={vintage.gold} /><Text allowFontScaling style={[styles.muted, kit.font('body')]}>Finding where you ate…</Text></View> : <>
         {chosen ? <View style={[styles.restaurant, styles.selected]} accessibilityLiveRegion="polite" testID="chosen-restaurant"><View style={styles.flex}>

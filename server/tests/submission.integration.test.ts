@@ -58,6 +58,13 @@ function authed(app: Express) {
 }
 
 describe('receipt submission', () => {
+  it('accepts a restaurant listing with a different branch suffix from the receipt', async () => {
+    const app = appWith({
+      loadReceiptDraft: async () => ({ imagePath: `${userId}/receipt.jpg`, imageHash: 'a'.repeat(64), status: 'draft', submissionId: null, acceptanceResult: null, restaurantName: 'IN-N-OUT LAGUNA HILLS' }),
+      acceptPlaceReceipt: async () => progression,
+    });
+    await authed(app).send({ ...confirmed, restaurantId: undefined, place: { osmType: 'node', osmId: 123, name: 'In-N-Out Burger', latitude: 33.6, longitude: -117.7 } }).expect(200);
+  });
   it('requires verified authentication and rejects forged tokens', async () => {
     const app = appWith();
     await request(app).post('/api/receipts/submit').send(confirmed).expect(401);

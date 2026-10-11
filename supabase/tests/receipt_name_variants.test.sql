@@ -1,0 +1,12 @@
+begin;
+set local search_path = public, extensions, pg_catalog;
+select plan(7);
+select ok(public.place_names_match('IN-N-OUT LAGUNA HILLS','In-N-Out Burger'),'receipt branch suffix matches the In-N-Out listing');
+select ok(public.place_names_match('Chick-fil-A #01234','Chick-fil-A'),'store numbers do not change restaurant identity');
+select ok(public.place_names_match('Mary Mac’s Tea Room Midtown','Mary Mac’s Tea Room'),'branch suffix retains a complete restaurant name');
+select ok(not public.place_names_match('Taco Bell','Bell'),'a single overlapping token does not identify a restaurant');
+select ok(not public.place_names_match('Taco Bell','Taco Cabana'),'different brands sharing a word are rejected');
+select ok(not public.place_names_match('Taco Bell','A'),'short substring bypass stays closed');
+select ok(not public.place_names_match(null,'Chick-fil-A'),'missing receipt names are rejected');
+select * from finish();
+rollback;
