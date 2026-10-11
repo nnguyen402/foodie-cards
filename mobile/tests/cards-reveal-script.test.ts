@@ -21,8 +21,9 @@ describe('reveal script', () => {
   });
 
   it('has no build-up for common and a longer one for each higher stage', () => {
-    expect(common.buildUpMs).toBe(0);
-    expect(rare.buildUpMs).toBe(650);
+    // Tear 420 + rise 600 + come forward 560; rare adds a 350 tease and a 300 hold.
+    expect(common.buildUpMs).toBe(1580);
+    expect(rare.buildUpMs).toBe(2230);
     expect(ultra.buildUpMs).toBeGreaterThan(rare.buildUpMs);
   });
 
@@ -78,5 +79,50 @@ describe('reveal script', () => {
 
   it('exports the reduced motion fade', () => {
     expect(REDUCED_FADE_MS).toBe(200);
+  });
+
+  it('gives every event a unique key prefixed by its kind', () => {
+    for (const script of [common, rare, ultra]) {
+      const keys = script.events.map((event) => event.key);
+      expect(new Set(keys).size).toBe(keys.length);
+      for (const event of script.events) expect(event.key.startsWith(`${event.kind}-`)).toBe(true);
+    }
+  });
+
+  it('tears the pack open for common and rare, then lets the card rise and come forward', () => {
+    for (const script of [common, rare]) {
+      const kinds = script.events.map((event) => event.kind);
+      expect(kinds.indexOf('tear')).toBeGreaterThanOrEqual(0);
+      expect(kinds.indexOf('tear')).toBeLessThan(kinds.indexOf('rise'));
+      expect(kinds.indexOf('rise')).toBeLessThan(kinds.indexOf('present'));
+      expect(kinds.indexOf('present')).toBeLessThan(kinds.indexOf('spin'));
+      expect(kinds).not.toContain('shatter');
+      expect(script.spin.startDeg).toBe(0);
+    }
+  });
+
+  it('cracks the ultra rare pack once per heartbeat, then shatters it and drops the card in', () => {
+    const cracks = ultra.events.filter((event) => event.kind === 'crack');
+    const pulses = ultra.events.filter((event) => event.kind === 'pulse');
+    expect(cracks.map((event) => (event.kind === 'crack' ? event.wave : -1))).toEqual([0, 1, 2]);
+    expect(cracks.map((event) => event.atMs)).toEqual(pulses.map((event) => event.atMs));
+    const kinds = ultra.events.map((event) => event.kind);
+    expect(kinds).not.toContain('tear');
+    const shatter = ultra.events.find((event) => event.kind === 'shatter');
+    const drop = ultra.events.find((event) => event.kind === 'drop');
+    expect(shatter?.atMs).toBe(drop?.atMs);
+    expect(drop && drop.kind === 'drop' ? drop.durationMs : 0).toBe(1700);
+    expect(ultra.buildUpMs).toBe((drop?.atMs ?? 0) + 1700 + 400);
+    expect(ultra.spin.startDeg).toBe(720);
+    expect(ultra.spin.endDeg).toBe(1260);
+  });
+
+  it('shakes the camera on the hit for every stage, harder each time', () => {
+    const hits = [common, rare, ultra].map((script) => script.reveal.shake?.amplitude ?? 0);
+    expect(hits[0]).toBeGreaterThan(0);
+    expect(hits[0]).toBeLessThan(hits[1]);
+    expect(hits[1]).toBeLessThan(hits[2]);
+    expect(common.reveal.rings.length).toBeLessThan(rare.reveal.rings.length);
+    expect(rare.reveal.rings.length).toBeLessThan(ultra.reveal.rings.length);
   });
 });

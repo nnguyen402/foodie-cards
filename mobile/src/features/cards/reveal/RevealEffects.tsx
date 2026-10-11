@@ -14,7 +14,7 @@ export type EffectBody =
   | { kind: 'flash'; flash: Flash }
   | { kind: 'burst'; burst: BurstSpec }
   | { kind: 'stream'; stream: StreamSpec };
-export type EffectItem = { id: number } & EffectBody;
+export type EffectItem = { key: string } & EffectBody;
 
 export type Arena = { width: number; height: number; cx: number; cy: number };
 
@@ -83,7 +83,7 @@ const Burst = memo(function Burst({ spec, arena }: { spec: BurstSpec; arena: Are
   const particles = useMemo(() => burstParticles(spec.count, spec.colors, spec.speed, spec.seed), [spec]);
   return (
     <View style={{ position: 'absolute', left: arena.cx, top: arena.cy, width: 0, height: 0 }}>
-      {particles.map((particle, index) => <BurstParticle key={index} particle={particle} />)}
+      {particles.map((particle) => <BurstParticle key={particle.key} particle={particle} />)}
     </View>
   );
 });
@@ -120,14 +120,14 @@ const Stream = memo(function Stream({ spec, arena }: { spec: StreamSpec; arena: 
     () => streamParticles(spec.kind, spec.count, spec.colors, spec.seed, arena, spec.durationMs),
     [spec, arena.width, arena.height], // eslint-disable-line react-hooks/exhaustive-deps
   );
-  return <>{particles.map((particle, index) => <StreamParticleView key={index} particle={particle} />)}</>;
+  return <>{particles.map((particle) => <StreamParticleView key={particle.key} particle={particle} />)}</>;
 });
 
 /** Rings that sit behind the card and shake with the scene. */
 export function RingLayer({ items, arena }: { items: EffectItem[]; arena: Arena }) {
   return (
     <Decoration>
-      {items.map((item) => (item.kind === 'ring' ? <Ring key={item.id} spec={item.ring} arena={arena} /> : null))}
+      {items.map((item) => (item.kind === 'ring' ? <Ring key={item.key} spec={item.ring} arena={arena} /> : null))}
     </Decoration>
   );
 }
@@ -137,9 +137,9 @@ export function FrontLayer({ items, arena }: { items: EffectItem[]; arena: Arena
   return (
     <Decoration>
       {items.map((item) => {
-        if (item.kind === 'flash') return <FlashLayer key={item.id} spec={item.flash} />;
-        if (item.kind === 'burst') return <Burst key={item.id} spec={item.burst} arena={arena} />;
-        if (item.kind === 'stream') return <Stream key={item.id} spec={item.stream} arena={arena} />;
+        if (item.kind === 'flash') return <FlashLayer key={item.key} spec={item.flash} />;
+        if (item.kind === 'burst') return <Burst key={item.key} spec={item.burst} arena={arena} />;
+        if (item.kind === 'stream') return <Stream key={item.key} spec={item.stream} arena={arena} />;
         return null;
       })}
     </Decoration>
@@ -170,7 +170,7 @@ export function Rays({ opacity, arena, color, periodMs }: { opacity: SharedValue
         key={periodMs}
         style={{ position: 'absolute', left: arena.cx, top: arena.cy, width: 0, height: 0, animationName: spinKeyframes, animationDuration: periodMs, animationIterationCount: 'infinite', animationTimingFunction: 'linear' }}
       >
-        {bars.map((bar, index) => <View key={index} style={bar} />)}
+        {bars.map((bar, index) => <View key={`ray-${index}`} style={bar} />)}
       </Animated.View>
     </Animated.View>
   );

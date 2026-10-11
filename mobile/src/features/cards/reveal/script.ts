@@ -29,9 +29,16 @@ export type RevealEffects = {
 };
 export type Finale = { flash: Flash; shake: Shake; rings: { atMs: number; ring: RingSpec }[]; burst: BurstSpec; rays: RaysFade };
 
-export type RevealEvent = { atMs: number } & (
+export type RevealEvent = { atMs: number; /** Unique within a script; used as the React key of whatever the event mounts. */ key: string } & (
   | { kind: 'dim'; fade: Fade }
   | { kind: 'rays'; fade: RaysFade }
+  | { kind: 'charge' }
+  | { kind: 'tear'; durationMs: number }
+  | { kind: 'rise'; durationMs: number }
+  | { kind: 'present'; durationMs: number; packAwayMs: number }
+  | { kind: 'crack'; wave: number }
+  | { kind: 'shatter' }
+  | { kind: 'drop'; durationMs: number; turnDeg: number }
   | { kind: 'rattle'; shake: Shake }
   | { kind: 'pulse'; pulse: Pulse }
   | { kind: 'shake'; shake: Shake }
@@ -46,7 +53,7 @@ export type RevealEvent = { atMs: number } & (
   | { kind: 'end' }
 );
 
-type EventBody = RevealEvent extends infer Event ? (Event extends unknown ? Omit<Event, 'atMs'> : never) : never;
+type EventBody = RevealEvent extends infer Event ? (Event extends unknown ? Omit<Event, 'atMs' | 'key'> : never) : never;
 
 export type RevealScript = ReturnType<typeof revealScript>;
 
@@ -57,17 +64,20 @@ type Tier = {
   glow: string;
   title: { letterMs: number; staggerMs: number; color: string; glow: string | null };
   cardGlow: string | null;
+  /** Camera jolt as the title lands. */
+  titleSlam: Shake | null;
 };
 
 const TIERS: Record<RestaurantStage, Tier> = {
-  discovered: { referenceTier: 0, flipMs: 600, glow: '#ffffff', title: { letterMs: 220, staggerMs: 20, color: '#f6ede2', glow: null }, cardGlow: null },
-  regular: { referenceTier: 2, flipMs: 1000, glow: '#ffb347', title: { letterMs: 360, staggerMs: 35, color: '#ffcf6b', glow: '#ffb347' }, cardGlow: '0 0 34px rgba(255,170,60,.55)' },
+  discovered: { referenceTier: 0, flipMs: 600, glow: '#ffffff', title: { letterMs: 220, staggerMs: 20, color: '#f6ede2', glow: null }, cardGlow: null, titleSlam: null },
+  regular: { referenceTier: 2, flipMs: 1000, glow: '#ffb347', title: { letterMs: 360, staggerMs: 35, color: '#ffcf6b', glow: '#ffb347' }, cardGlow: '0 0 34px rgba(255,170,60,.55)', titleSlam: { amplitude: 5, durationMs: 240 } },
   house_favorite: {
     referenceTier: 4,
     flipMs: 900,
     glow: '#f5c542',
     title: { letterMs: 360, staggerMs: 55, color: '#f5c542', glow: '#f5c542' },
     cardGlow: '0 0 60px rgba(245,197,66,.75), 0 0 120px rgba(245,197,66,.35)',
+    titleSlam: { amplitude: 9, durationMs: 280 },
   },
 };
 
@@ -80,8 +90,16 @@ const LIFT_MS = 150;
 const SETTLE_MS = 320;
 const NAME_AFTER_LAST_LETTER_MS = 300;
 const NAME_FADE_MS = 300;
-// The reference drops the card in from above here; with no pack, the finale just holds.
-const FINALE_HOLD_MS = 600;
+// The pack: drops in, tears open, the card rises out and comes forward. On Ultra Rare it
+// shatters instead and the card falls in from above, turning twice face down.
+export const PACK_DROP_IN_MS = 520;
+const TEAR_MS = 420;
+const RISE_MS = 600;
+const PRESENT_MS = 560;
+const PACK_AWAY_MS = 520;
+const DROP_MS = 1700;
+const DROP_TURN_DEG = 720;
+const AFTER_DROP_MS = 400;
 const GOLD = '#f5c542';
 
 const ring = (color: string, scale: number, durationMs: number, widthPx: number): RingSpec => ({ color, scale, durationMs, widthPx });
@@ -90,10 +108,10 @@ const round2 = (value: number) => Math.round(value * 100) / 100;
 
 function buildUp(stage: RestaurantStage, tier: Tier) {
   if (stage === 'discovered') {
-    return { dim: null, rays: null, rattle: null, heartbeat: null, finale: null, waitMs: 0, durationMs: 0 };
+    return { dim: null, rays: null, rattle: null, heartbeat: null, finale: null, waitMs: 0, holdMs: 0 };
   }
   if (stage === 'regular') {
-    return { dim: { to: 0.6, durationMs: 700 }, rays: { to: 0.3, durationMs: 900, periodMs: 18000 }, rattle: null, heartbeat: null, finale: null, waitMs: 350 + 300, durationMs: 650 };
+    return { dim: { to: 0.6, durationMs: 700 }, rays: { to: 0.3, durationMs: 900, periodMs: 18000 }, rattle: null, heartbeat: null, finale: null, waitMs: 350, holdMs: 300 };
   }
   const pulses: Pulse[] = [0, 1, 2].map((k) => ({
     peakScale: round2(1.06 + k * 0.03),
@@ -112,42 +130,43 @@ function buildUp(stage: RestaurantStage, tier: Tier) {
       flash: flash(1, 1100, '#ffffff'),
       shake: { amplitude: 18, durationMs: 800 },
       rings: [{ atMs: 0, ring: ring('#fff6d6', 8, 1100, 5) }, { atMs: 120, ring: ring(tier.glow, 10, 1300, 3) }],
-      burst: { count: 56, referenceCount: 140, colors: [GOLD, '#ffe08a', '#fff6d6', '#ffffff'], speed: 12, seed: 140, lifeMs: 1600 },
+      burst: { count: 80, referenceCount: 140, colors: [GOLD, '#ffe08a', '#fff6d6', '#ffffff'], speed: 12, seed: 140, lifeMs: 1600 },
       rays: { to: 0.85, durationMs: 600, periodMs: 7000 },
     },
     waitMs: 350,
-    durationMs: 0,
+    holdMs: AFTER_DROP_MS,
   };
 }
 
 function reveal(stage: RestaurantStage, tier: Tier): RevealEffects {
   if (stage === 'discovered') {
     return {
-      flashes: [], shake: null, rings: [{ atMs: 0, ...ring('#ffffff', 3, 600, 2) }], shine: null, dim: null, rays: null, stream: null,
+      flashes: [flash(0.25, 350, '#ffffff')], shake: { amplitude: 5, durationMs: 300 },
+      rings: [{ atMs: 0, ...ring('#ffffff', 3, 600, 2) }, { atMs: 120, ...ring('#f2b632', 4.5, 800, 2) }], shine: null, dim: null, rays: null, stream: null,
       burst: { count: 16, referenceCount: 18, colors: ['#f2b632', '#d8402b', '#ffffff'], speed: 5, seed: 18, lifeMs: 1600 },
     };
   }
   if (stage === 'regular') {
     return {
       flashes: [flash(0.5, 500, '#ffb347')],
-      shake: { amplitude: 8, durationMs: 450 },
-      rings: [{ atMs: 0, ...ring(tier.glow, 6, 900, 4) }, { atMs: 150, ...ring('#ff7a2b', 8, 1100, 2) }],
+      shake: { amplitude: 12, durationMs: 500 },
+      rings: [{ atMs: 0, ...ring(tier.glow, 6, 900, 4) }, { atMs: 150, ...ring('#ff7a2b', 8, 1100, 2) }, { atMs: 300, ...ring('#ffd27a', 10, 1300, 2) }],
       shine: { durationMs: 1200, iterations: 2 },
       dim: { to: 0.4, durationMs: 900 },
       rays: { to: 0.6, durationMs: 400, periodMs: 18000 },
       stream: { kind: 'ember', durationMs: 3200, count: 24, referenceCount: Math.floor(3200 / 70) * 3, colors: ['#ffb347', '#ff7a2b', '#ffd27a'], seed: 31, lifeMs: 3200 + 3000 },
-      burst: { count: 36, referenceCount: 70, colors: ['#ffb347', '#ff7a2b', '#ffd27a', '#ffffff'], speed: 9, seed: 70, lifeMs: 1600 },
+      burst: { count: 48, referenceCount: 70, colors: ['#ffb347', '#ff7a2b', '#ffd27a', '#ffffff'], speed: 9, seed: 70, lifeMs: 1600 },
     };
   }
   return {
     flashes: [flash(0.9, 900, '#fff6d6')],
-    shake: { amplitude: 14, durationMs: 700 },
-    rings: [0, 1, 2].map((k) => ({ atMs: k * 160, ...ring(k ? tier.glow : '#ffffff', 8 + k * 2, 1200, 4 - k) })),
+    shake: { amplitude: 20, durationMs: 800 },
+    rings: [0, 1, 2, 3].map((k) => ({ atMs: k * 160, ...ring(k ? tier.glow : '#ffffff', 8 + k * 2, 1200, Math.max(1, 4 - k)) })),
     shine: { durationMs: 1200, iterations: 2 },
     dim: { to: 0.55, durationMs: 1500 },
     rays: null,
-    stream: { kind: 'leaf', durationMs: 5200, count: 24, referenceCount: Math.floor(5200 / 60) * 3, colors: [GOLD, '#ffe08a', '#fff6d6'], seed: 52, lifeMs: 5200 + 4400 },
-    burst: { count: 56, referenceCount: 200, colors: [GOLD, '#ffe08a', '#fff6d6', '#ffffff', '#d99a1e'], speed: 13, seed: 200, lifeMs: 1600 },
+    stream: { kind: 'leaf', durationMs: 5200, count: 36, referenceCount: Math.floor(5200 / 60) * 3, colors: [GOLD, '#ffe08a', '#fff6d6'], seed: 52, lifeMs: 5200 + 4400 },
+    burst: { count: 96, referenceCount: 200, colors: [GOLD, '#ffe08a', '#fff6d6', '#ffffff', '#d99a1e'], speed: 13, seed: 200, lifeMs: 1600 },
   };
 }
 
@@ -167,7 +186,9 @@ export function revealScript(stage: RestaurantStage) {
     cursor += pulse.beatMs + pulse.gapMs;
   }
   const finaleAt = cursor + (up.heartbeat?.afterMs ?? 0);
-  const buildUpMs = up.finale ? finaleAt + FINALE_HOLD_MS : up.durationMs;
+  const tearAt = up.waitMs;
+  const buildUpMs = up.finale ? finaleAt + DROP_MS + up.holdMs : tearAt + TEAR_MS + RISE_MS + PRESENT_MS + up.holdMs;
+  const spinStartDeg = up.finale ? DROP_TURN_DEG : 0;
 
   const letters = [...stageLabel(stage)].filter((char) => char !== ' ').length;
   const nameAtMs = (letters - 1) * tier.title.staggerMs + NAME_AFTER_LAST_LETTER_MS;
@@ -179,18 +200,27 @@ export function revealScript(stage: RestaurantStage) {
   const totalMs = landedAt + title.durationMs;
 
   const events: RevealEvent[] = [];
-  const add = (atMs: number, event: EventBody) => events.push({ atMs, ...event } as RevealEvent);
+  const add = (atMs: number, event: EventBody) => events.push({ atMs, key: `${event.kind}-${events.length}`, ...event } as RevealEvent);
 
+  if (up.dim) add(0, { kind: 'charge' });
   if (up.dim) add(0, { kind: 'dim', fade: up.dim });
   if (up.rays) add(0, { kind: 'rays', fade: up.rays });
   if (up.rattle) add(up.waitMs, { kind: 'rattle', shake: up.rattle });
+  if (!up.finale) {
+    add(tearAt, { kind: 'tear', durationMs: TEAR_MS });
+    add(tearAt + TEAR_MS, { kind: 'rise', durationMs: RISE_MS });
+    add(tearAt + TEAR_MS + RISE_MS, { kind: 'present', durationMs: PRESENT_MS, packAwayMs: PACK_AWAY_MS });
+  }
   up.heartbeat?.pulses.forEach((pulse, k) => {
+    add(pulseStarts[k], { kind: 'crack', wave: k });
     add(pulseStarts[k], { kind: 'pulse', pulse });
     add(pulseStarts[k], { kind: 'ring', ring: pulse.ring });
     add(pulseStarts[k], { kind: 'flash', flash: pulse.flash });
     add(pulseStarts[k], { kind: 'shake', shake: pulse.shake });
   });
   if (up.finale) {
+    add(finaleAt, { kind: 'shatter' });
+    add(finaleAt, { kind: 'drop', durationMs: DROP_MS, turnDeg: DROP_TURN_DEG });
     add(finaleAt, { kind: 'flash', flash: up.finale.flash });
     add(finaleAt, { kind: 'shake', shake: up.finale.shake });
     for (const { atMs, ring: spec } of up.finale.rings) add(finaleAt + atMs, { kind: 'ring', ring: spec });
@@ -212,6 +242,7 @@ export function revealScript(stage: RestaurantStage) {
   if (effects.dim) add(at, { kind: 'dim', fade: effects.dim });
   if (effects.stream) add(at, { kind: 'stream', stream: effects.stream });
   add(landedAt, { kind: 'landed' });
+  if (tier.titleSlam) add(landedAt, { kind: 'shake', shake: tier.titleSlam });
   add(totalMs, { kind: 'end' });
 
   const effectsEndMs = Math.max(totalMs, ...events.map((event) => {
@@ -234,6 +265,8 @@ export function revealScript(stage: RestaurantStage) {
     spin: {
       durationMs: spinMs,
       turnDeg: SPIN_TURN_DEG,
+      startDeg: spinStartDeg,
+      endDeg: spinStartDeg + SPIN_TURN_DEG,
       easing: [0.45, 0, 0.15, 1] as const,
       peakAt: SPIN_PEAK_AT,
       peakScale: SPIN_PEAK_SCALE,

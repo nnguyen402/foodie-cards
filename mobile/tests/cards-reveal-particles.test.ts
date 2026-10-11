@@ -83,3 +83,21 @@ describe('shake offsets', () => {
     expect(Math.max(...offsets.map(Math.abs))).toBeLessThanOrEqual(7);
   });
 });
+
+describe('effect element keys', () => {
+  const unique = (keys: string[]) => new Set(keys).size === keys.length;
+
+  it('are unique within a burst and prefixed by shape', () => {
+    const particles = burstParticles(96, COLORS, 13, 200);
+    expect(unique(particles.map((particle) => particle.key))).toBe(true);
+    for (const particle of particles) expect(particle.key.startsWith(`${particle.shape}-`)).toBe(true);
+  });
+
+  it('are unique within a stream and prefixed by kind', () => {
+    for (const kind of ['ember', 'leaf'] as const) {
+      const particles = streamParticles(kind, 36, COLORS, 52, AREA, 5200);
+      expect(unique(particles.map((particle) => particle.key))).toBe(true);
+      expect(particles[3].key).toBe(`${kind}-3`);
+    }
+  });
+});

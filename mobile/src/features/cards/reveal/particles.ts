@@ -7,6 +7,8 @@ import { seededRandom } from '../frameLayout';
 export type ParticleShape = 'dot' | 'spark' | 'ember' | 'leaf';
 
 export type Particle = {
+  /** Unique within its burst or stream, prefixed by shape. */
+  key: string;
   /** Where the particle ends up, in px from where it starts. */
   dx: number;
   dy: number;
@@ -46,6 +48,7 @@ export function burstParticles(count: number, colors: readonly string[], speed: 
     const distance = speed * (0.3 + next()) * BURST_REACH;
     const spark = next() < 0.35;
     return {
+      key: `${spark ? 'spark' : 'dot'}-${index}`,
       dx: Math.cos(angle) * distance,
       // Gravity pulls the whole burst down a little by the time it fades.
       dy: Math.sin(angle) * distance + distance * BURST_FALL,
@@ -70,6 +73,7 @@ export function streamParticles(kind: StreamKind, count: number, colors: readonl
     const delayMs = next() * durationMs;
     const travel = ember ? 220 + next() * 380 : 420 + next() * 380;
     return {
+      key: `${kind}-${index}`,
       x: ember ? area.width * (0.25 + next() * 0.5) : next() * area.width,
       y: ember ? area.height + 10 : -10,
       dx: (next() - 0.5) * (ember ? 60 : 90),

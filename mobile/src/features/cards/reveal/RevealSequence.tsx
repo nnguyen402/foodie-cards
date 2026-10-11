@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RestaurantStage } from '@foodie-cards/shared';
-import Animated, { Easing, cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, cancelAnimation, cubicBezier, useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { Button } from '@/components/ui/button';
 import { RestaurantCard } from '../RestaurantCard';
 import { frameRects } from '../frameLayout';
@@ -10,9 +10,11 @@ import { gradient } from '../gradient';
 import { stageLabel } from '../stageStyles';
 import type { CardView } from '../types';
 import { CardBack } from './CardBack';
+import { Pack, Shards, Shreds } from './Pack';
+import { packSize } from './packGeometry';
 import { rattleOffsets, shakeOffsets } from './particles';
 import { Dim, FrontLayer, Rays, RingLayer, ShineSweep, type Arena, type EffectBody, type EffectItem } from './RevealEffects';
-import { REDUCED_FADE_MS, revealScript, type RevealEvent } from './script';
+import { PACK_DROP_IN_MS, REDUCED_FADE_MS, revealScript, type RevealEvent } from './script';
 import { StageTitle } from './StageTitle';
 
 export type RevealSequenceProps = {
@@ -36,8 +38,8 @@ const INK = '#f6ede2';
 const PERSPECTIVE = 1100;
 const CARD_MAX_WIDTH = 300;
 const CARD_WIDTH_SHARE = 0.72;
-// The card is up to this much larger mid-spin, and still has to clear the title and buttons.
-const FIT_SCALE = 1.15;
+// The card is up to this much larger mid-spin (and the pack is taller than the card), and still has to clear the title and buttons.
+const FIT_SCALE = 1.22;
 const SKIP_ROW = 52;
 const DEMO_ROW = 36;
 const TITLE_BLOCK = 112;
@@ -47,6 +49,18 @@ const GLOW_FADE_MS = 500;
 const EASE_OUT = Easing.bezier(0, 0, 0.58, 1);
 const EASE_IN_OUT = Easing.bezier(0.42, 0, 0.58, 1);
 const OVERSHOOT = Easing.bezier(0.3, 1.6, 0.5, 1);
+const EASE_IN = Easing.bezier(0.42, 0, 1, 1);
+// The card sits a little low and small inside the pack, as in the reference.
+const IN_PACK_SCALE = 0.9;
+const IN_PACK_OFFSET = 0.1;
+const RISE_OFFSET = -0.58;
+const DROP_START_SCALE = 0.5;
+const TEAR_MS_FALLBACK = 420;
+
+const packDropIn = {
+  from: { transform: [{ translateY: -520 }, { rotate: '-8deg' }], opacity: 0 },
+  to: { transform: [{ translateY: 0 }, { rotate: '0deg' }], opacity: 1 },
+} as const;
 
 const promptPulse = { '0%': { opacity: 0.45 }, '50%': { opacity: 1 }, '100%': { opacity: 0.45 } } as const;
 const summaryFade = { from: { opacity: 0, transform: [{ translateY: 8 }] }, to: { opacity: 1, transform: [{ translateY: 0 }] } } as const;
@@ -65,10 +79,21 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
   const [shine, setShine] = useState<{ durationMs: number; iterations: number } | null>(null);
   const [rays, setRays] = useState<number | null>(null);
   const [dimmed, setDimmed] = useState(false);
+  const [packState, setPackState] = useState<'sealed' | 'torn' | 'gone'>('sealed');
+  const [tearMs, setTearMs] = useState(TEAR_MS_FALLBACK);
+  const [charged, setCharged] = useState(false);
+  const [crackWave, setCrackWave] = useState(-1);
+  const [shards, setShards] = useState(false);
+  const [cardOnTop, setCardOnTop] = useState(false);
 
   const rotation = useSharedValue(0);
-  const cardScale = useSharedValue(1);
+  const cardScale = useSharedValue(IN_PACK_SCALE);
+  const cardY = useSharedValue(0);
+  const cardOpacity = useSharedValue(0);
   const rattle = useSharedValue(0);
+  const packScale = useSharedValue(1);
+  const packY = useSharedValue(0);
+  const packOpacity = useSharedValue(1);
   const sceneX = useSharedValue(0);
   const sceneY = useSharedValue(0);
   const dim = useSharedValue(0);
@@ -76,7 +101,6 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
   const fade = useSharedValue(0);
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const effectId = useRef(0);
   const viewed = useRef(false);
   const onViewedRef = useRef(onViewed);
   onViewedRef.current = onViewed;
@@ -85,6 +109,7 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
   const availableHeight = Math.max(0, windowHeight - topReserve - insets.bottom - BOTTOM_BLOCK);
   const cardWidth = Math.floor(Math.max(120, Math.min(CARD_MAX_WIDTH, windowWidth * CARD_WIDTH_SHARE, availableHeight / (1.4 * FIT_SCALE))));
   const rects = useMemo(() => frameRects(cardWidth), [cardWidth]);
+  const pack = useMemo(() => packSize(cardWidth), [cardWidth]);
   const arena = useMemo<Arena>(
     () => ({ width: windowWidth, height: windowHeight, cx: windowWidth / 2, cy: topReserve + availableHeight / 2 }),
     [windowWidth, windowHeight, topReserve, availableHeight],
@@ -103,17 +128,24 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
     onViewedRef.current();
   }, []);
 
-  const addEffect = useCallback((item: EffectBody) => {
-    effectId.current += 1;
-    setEffects((list) => [...list, { ...item, id: effectId.current } as EffectItem]);
+  const addEffect = useCallback((key: string, item: EffectBody) => {
+    setEffects((list) => [...list, { ...item, key } as EffectItem]);
   }, []);
 
   const finish = useCallback((skipped: boolean) => {
     clearTimers();
-    [rotation, cardScale, rattle, sceneX, sceneY, dim, raysOpacity, fade].forEach(cancelAnimation);
-    rotation.set(reducedMotion ? 0 : script.spin.turnDeg);
+    [rotation, cardScale, cardY, cardOpacity, rattle, packScale, packY, packOpacity, sceneX, sceneY, dim, raysOpacity, fade].forEach(cancelAnimation);
+    rotation.set(reducedMotion ? 0 : script.spin.endDeg);
     cardScale.set(1);
+    cardY.set(0);
+    cardOpacity.set(1);
+    packOpacity.set(0);
     rattle.set(0);
+    setPackState('gone');
+    setShards(false);
+    setCharged(false);
+    setCrackWave(-1);
+    setCardOnTop(true);
     sceneX.set(0);
     sceneY.set(0);
     fade.set(1);
@@ -128,7 +160,7 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
     }
     setPhase('done');
     markViewed();
-  }, [clearTimers, rotation, cardScale, rattle, sceneX, sceneY, dim, raysOpacity, fade, reducedMotion, script, markViewed]);
+  }, [clearTimers, rotation, cardScale, cardY, cardOpacity, rattle, packScale, packY, packOpacity, sceneX, sceneY, dim, raysOpacity, fade, reducedMotion, script, markViewed]);
 
   const apply = useCallback((event: RevealEvent) => {
     switch (event.kind) {
@@ -145,9 +177,51 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
         rattle.set(withSequence(...offsets.map((offset) => withTiming(offset, { duration: stepMs, easing: Easing.linear }))));
         break;
       }
+      case 'charge':
+        setCharged(true);
+        break;
+      case 'tear':
+        setTearMs(event.durationMs);
+        setPackState('torn');
+        break;
+      case 'rise':
+        cardOpacity.set(1);
+        cardY.set(withSequence(
+          withTiming(rects.height * IN_PACK_OFFSET, { duration: 0 }),
+          withTiming(rects.height * RISE_OFFSET, { duration: event.durationMs, easing: Easing.bezier(0.2, 0.8, 0.2, 1) }),
+        ));
+        break;
+      case 'present':
+        setCardOnTop(true);
+        packY.set(withTiming(pack.height * 0.95, { duration: event.packAwayMs, easing: EASE_IN }));
+        packOpacity.set(withTiming(0, { duration: event.packAwayMs, easing: EASE_IN }));
+        cardY.set(withTiming(0, { duration: event.durationMs, easing: Easing.bezier(0.3, 1.35, 0.5, 1) }));
+        cardScale.set(withTiming(script.spin.restScale, { duration: event.durationMs, easing: Easing.bezier(0.3, 1.35, 0.5, 1) }));
+        break;
+      case 'crack':
+        setCrackWave(event.wave);
+        break;
+      case 'shatter':
+        packOpacity.set(0);
+        setPackState('gone');
+        setShards(true);
+        setCardOnTop(true);
+        break;
+      case 'drop':
+        cardOpacity.set(1);
+        cardY.set(withSequence(
+          withTiming(-(arena.cy + rects.height), { duration: 0 }),
+          withTiming(0, { duration: event.durationMs, easing: Easing.bezier(0.2, 0.75, 0.25, 1) }),
+        ));
+        cardScale.set(withSequence(
+          withTiming(DROP_START_SCALE, { duration: 0 }),
+          withTiming(script.spin.restScale, { duration: event.durationMs, easing: Easing.bezier(0.2, 0.75, 0.25, 1) }),
+        ));
+        rotation.set(withTiming(event.turnDeg, { duration: event.durationMs, easing: Easing.bezier(0.25, 0.6, 0.3, 1) }));
+        break;
       case 'pulse': {
         const rise = Math.round(event.pulse.beatMs * 0.35);
-        cardScale.set(withSequence(
+        packScale.set(withSequence(
           withTiming(event.pulse.peakScale, { duration: rise, easing: OVERSHOOT }),
           withTiming(1, { duration: event.pulse.beatMs - rise, easing: EASE_OUT }),
         ));
@@ -160,23 +234,23 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
         break;
       }
       case 'flash':
-        addEffect({ kind: 'flash', flash: event.flash });
+        addEffect(event.key, { kind: 'flash', flash: event.flash });
         break;
       case 'ring':
-        addEffect({ kind: 'ring', ring: event.ring });
+        addEffect(event.key, { kind: 'ring', ring: event.ring });
         break;
       case 'burst':
-        addEffect({ kind: 'burst', burst: event.burst });
+        addEffect(event.key, { kind: 'burst', burst: event.burst });
         break;
       case 'stream':
-        addEffect({ kind: 'stream', stream: event.stream });
+        addEffect(event.key, { kind: 'stream', stream: event.stream });
         break;
       case 'shine':
         setShine({ durationMs: event.durationMs, iterations: event.iterations });
         break;
       case 'spin': {
         const { spin } = script;
-        rotation.set(withTiming(spin.turnDeg, { duration: spin.durationMs, easing: Easing.bezier(...spin.easing) }));
+        rotation.set(withTiming(spin.endDeg, { duration: spin.durationMs, easing: Easing.bezier(...spin.easing) }));
         cardScale.set(withSequence(
           withTiming(spin.restScale, { duration: spin.liftMs, easing: EASE_IN_OUT }),
           withTiming(spin.peakScale, { duration: spin.durationMs * spin.peakAt - spin.liftMs, easing: EASE_IN_OUT }),
@@ -196,13 +270,16 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
         finish(false);
         break;
     }
-  }, [addEffect, cardScale, dim, finish, raysOpacity, rattle, rotation, sceneX, sceneY, script]);
+  }, [addEffect, arena.cy, cardOpacity, cardScale, cardY, dim, finish, pack.height, packOpacity, packScale, packY, raysOpacity, rattle, rects.height, rotation, sceneX, sceneY, script]);
 
   const reveal = useCallback(() => {
     if (phase !== 'sealed' || started.current) return;
     started.current = true;
     setPhase('playing');
     if (reducedMotion) {
+      cardScale.set(1);
+      cardOpacity.set(1);
+      packOpacity.set(withTiming(0, { duration: REDUCED_FADE_MS }));
       fade.set(withTiming(1, { duration: REDUCED_FADE_MS }));
       setShown('fade');
       timers.current.push(setTimeout(() => finish(false), REDUCED_FADE_MS));
@@ -212,7 +289,7 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
     for (const atMs of times) {
       timers.current.push(setTimeout(() => script.events.filter((event) => event.atMs === atMs).forEach(apply), atMs));
     }
-  }, [phase, reducedMotion, fade, finish, script, apply]);
+  }, [phase, reducedMotion, fade, cardScale, cardOpacity, packOpacity, finish, script, apply]);
 
   const skip = useCallback(() => finish(true), [finish]);
 
@@ -221,7 +298,12 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
   }, [phase, name, script.label]);
 
   const cardStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: PERSPECTIVE }, { translateX: rattle.get() }, { scale: cardScale.get() }, { rotateY: `${rotation.get()}deg` }],
+    opacity: cardOpacity.get(),
+    transform: [{ perspective: PERSPECTIVE }, { translateY: cardY.get() }, { scale: cardScale.get() }, { rotateY: `${rotation.get()}deg` }],
+  }));
+  const packStyle = useAnimatedStyle(() => ({
+    opacity: packOpacity.get(),
+    transform: [{ translateX: rattle.get() }, { translateY: packY.get() }, { rotate: `${rattle.get() / 4}deg` }, { scale: packScale.get() }],
   }));
   const sceneStyle = useAnimatedStyle(() => ({ transform: [{ translateX: sceneX.get() }, { translateY: sceneY.get() }] }));
   // Without backfaceVisibility, the face turned towards the viewer is the one whose angle has the right cosine sign.
@@ -229,7 +311,7 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
     opacity: reducedMotion ? fade.get() : Math.cos((rotation.get() * Math.PI) / 180) < 0 ? 1 : 0,
   }));
   const backStyle = useAnimatedStyle(() => ({
-    opacity: reducedMotion ? 1 - fade.get() : Math.cos((rotation.get() * Math.PI) / 180) > 0 ? 1 : 0,
+    opacity: reducedMotion ? 0 : Math.cos((rotation.get() * Math.PI) / 180) > 0 ? 1 : 0,
   }));
 
   const summary = previousStage === null ? 'New card unlocked' : `Evolved from ${stageLabel(previousStage)} to ${script.label}`;
@@ -244,7 +326,7 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
 
       <Animated.View pointerEvents="box-none" style={[StyleSheet.absoluteFill, sceneStyle]}>
         <RingLayer items={effects} arena={arena} />
-        <Animated.View style={[{ position: 'absolute', left: arena.cx - cardWidth / 2, top: arena.cy - rects.height / 2, width: cardWidth, height: rects.height }, cardStyle]}>
+        <Animated.View style={[{ position: 'absolute', left: arena.cx - cardWidth / 2, top: arena.cy - rects.height / 2, width: cardWidth, height: rects.height, zIndex: cardOnTop ? 3 : 1 }, cardStyle]}>
           {script.cardGlow && shown !== 'no' ? (
             <Animated.View
               pointerEvents="none"
@@ -266,15 +348,35 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
               {shine ? <ShineSweep width={cardWidth} height={rects.height} radius={rects.radius} {...shine} /> : null}
             </View>
           </Animated.View>
-          <Pressable
-            accessible={phase === 'sealed'}
-            accessibilityRole="button"
-            accessibilityLabel="Reveal your card"
-            disabled={phase !== 'sealed'}
-            onPress={reveal}
-            style={StyleSheet.absoluteFill}
-          />
         </Animated.View>
+        {packState === 'gone' ? null : (
+          <Animated.View
+            style={[{ position: 'absolute', left: arena.cx - pack.width / 2, top: arena.cy - pack.height / 2, width: pack.width, height: pack.height, zIndex: 2 },
+              reducedMotion ? null : { animationName: packDropIn, animationDuration: PACK_DROP_IN_MS, animationFillMode: 'both', animationTimingFunction: cubicBezier(0.2, 1.35, 0.4, 1) }]}
+          >
+            <Animated.View style={packStyle}>
+              <Pack width={pack.width} height={pack.height} glow={charged ? script.glow : null} torn={packState === 'torn'} tearMs={tearMs} crackWave={crackWave} />
+            </Animated.View>
+            {packState === 'torn' ? (
+              <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: pack.height * 0.08 }}>
+                <Shreds packWidth={pack.width} />
+              </View>
+            ) : null}
+            <Pressable
+              accessible={phase === 'sealed'}
+              accessibilityRole="button"
+              accessibilityLabel="Open your pack"
+              disabled={phase !== 'sealed'}
+              onPress={reveal}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+        )}
+        {shards ? (
+          <View pointerEvents="none" style={{ position: 'absolute', left: arena.cx - pack.width / 2, top: arena.cy - pack.height / 2, width: pack.width, height: pack.height, zIndex: 2 }}>
+            <Shards width={pack.width} height={pack.height} />
+          </View>
+        ) : null}
       </Animated.View>
 
       <FrontLayer items={effects} arena={arena} />
@@ -307,7 +409,7 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
             importantForAccessibility="no-hide-descendants"
             style={[styles.prompt, reducedMotion ? null : { animationName: promptPulse, animationDuration: 1800, animationIterationCount: 'infinite', animationTimingFunction: 'ease-in-out' }]}
           >
-            Tap to reveal
+            Tap the pack to open
           </Animated.Text>
         ) : null}
         {resting ? (

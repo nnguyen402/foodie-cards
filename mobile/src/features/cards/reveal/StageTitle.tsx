@@ -47,10 +47,10 @@ export function StageTitle({ script, restaurantName, instant = false, fade = fal
     >
       <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden style={styles.words}>
         {words.map((letters, wordIndex) => (
-          <View key={wordIndex} style={styles.word}>
+          <View key={`word-${wordIndex}`} style={styles.word}>
             {letters.map(({ char, index }) => (
               <Animated.Text
-                key={index}
+                key={`letter-${index}`}
                 allowFontScaling={false}
                 style={[styles.letter, textShadow, { color: title.color }, stillLetters ? null : {
                   opacity: 0, animationName: letterKeyframes, animationDuration: title.letterMs, animationDelay: index * title.staggerMs,
@@ -80,6 +80,6 @@ const styles = StyleSheet.create({
   block: { alignItems: 'center', paddingHorizontal: 16 },
   words: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 14 },
   word: { flexDirection: 'row' },
-  letter: { fontSize: 36, fontWeight: '900', letterSpacing: 1.5 },
+  letter: { fontSize: 42, fontWeight: '900', letterSpacing: 1.5 },
   name: { marginTop: 6, color: INK, fontSize: 13, fontWeight: '700', letterSpacing: 2.6, textTransform: 'uppercase', textAlign: 'center' },
 });
