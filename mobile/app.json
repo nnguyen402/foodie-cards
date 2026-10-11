@@ -16,7 +16,8 @@
           "cameraPermission": "Take a receipt photo to review your purchases.",
           "microphonePermission": false
         }
-      ]
+      ],
+      ["expo-location", { "locationWhenInUsePermission": "Foodie Cards uses your location to centre the map on restaurants near you." }]
     ],
     "experiments": {
       "typedRoutes": true
