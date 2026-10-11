@@ -15,6 +15,7 @@ Set these in the matching app environment. Do not commit `.env` files or real ke
 | Server | `SUPABASE_SERVICE_ROLE_KEY` | The project service-role key; keep it in backend secrets only |
 | Server | `GEMINI_API_KEY` | Gemini API key; keep it in backend secrets only |
 | Server | `GEMINI_MODEL` | The image-capable Gemini model selected for the project |
+| Server | `GEMINI_THINKING_LEVEL` | Optional Gemini 3 Flash setting: `low` (default), `medium`, or `high`; omitted from requests to other models |
 
 For local phone development, `EXPO_PUBLIC_API_URL` must use the development computer's LAN address and the backend port, such as `http://192.168.1.20:3000`. A phone cannot reach the development computer through `localhost`. Both devices need network access to that address. For a device using Expo Go against a hosted backend, use the deployed HTTPS backend URL instead.
 
@@ -50,6 +51,16 @@ Each auth signup inserts a private `profiles` row with `display_name = 'Foodie'`
 Receipt storage paths must start with the owning user's UUID, for example `<user-uuid>/<receipt-id>.jpg`. The bucket is private and Storage policies check that first folder against `auth.uid()`. Do not put receipt images, totals, receipt numbers, or paths into public profile views.
 
 ## Mobile development and iPhone QA
+
+### Receipt scanning
+
+The signed-in scan screen accepts a camera photo or photo-library image, converts it to JPEG, and uploads it to `POST /api/receipts/extract`. The server validates the image, reads it with Gemini, and saves an editable draft and image privately under the signed-in user. `GET /api/receipts/drafts/:draftId` restores that user's draft; `GET /api/receipts/restaurants` supplies supported locations. Extraction does not award XP.
+
+Apply `20261011000100_receipt_draft_fields.sql` before using this flow. It allows unreadable fields to stay empty while a receipt is a draft and requires complete fields once it leaves draft status. This change is delivered as a migration; testing the branch does not deploy it to a hosted project.
+
+Gemini requests allow 30 seconds per attempt and one retry. Gemini 3 Flash uses low thinking by default to keep receipt extraction within that budget. The confirmation screen submits to Lane A's `/api/receipts/submit`; that endpoint must be integrated before receipt acceptance and rewards can complete. A missing endpoint produces a visible error and preserves edits for retry.
+
+Receipt extraction was tested with three supplied photos using the configured Gemini model. Physical-phone QA is still required for camera permission, library selection, image conversion, upload over the phone's network, account switching, and confirmation with Lane A integrated.
 
 Install the root workspace dependencies using the repository's package manager, then start Expo using the script documented in the root `package.json` (currently owned by the foundation scaffold). Open its QR code with Expo Go on the demo iPhone. The phone and development computer need to share a network that allows local device traffic. Configure the Supabase URL/key and LAN-accessible API URL in the mobile environment before launching.
 

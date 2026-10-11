@@ -1,6 +1,8 @@
 import express, { type Express, type RequestHandler } from 'express';
 import { apiErrorSchema, type ApiError, type ApiErrorCode } from '@foodie-cards/shared';
 import type { ServerDependencies } from './auth.js';
+import { createReceiptRouter } from './receipts/routes.js';
+import type { ReceiptDependencies } from './receipts/store.js';
 
 export type { ServerDependencies } from './auth.js';
 
@@ -9,7 +11,10 @@ function sendError(res: express.Response, status: number, code: ApiErrorCode, me
   return res.status(status).json(apiErrorSchema.parse(body));
 }
 
-export function createApp(dependencies: ServerDependencies | undefined = undefined): Express {
+export function createApp(
+  dependencies: ServerDependencies | undefined = undefined,
+  receiptDependencies: ReceiptDependencies | undefined = undefined,
+): Express {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '32kb' }));
@@ -56,6 +61,8 @@ export function createApp(dependencies: ServerDependencies | undefined = undefin
       sendError(res, 503, 'AUTH_UNAVAILABLE', 'Profile service is unavailable right now.', true);
     }
   });
+
+  app.use('/api/receipts', createReceiptRouter(requireVerifiedUser, receiptDependencies));
 
   return app;
 }

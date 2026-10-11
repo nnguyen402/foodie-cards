@@ -46,6 +46,7 @@ export const receiptItemConfirmedSchema = z.object({
 
 export const receiptDraftSchema = z.object({
   draftId: z.string().min(1),
+  restaurantName: z.string().nullable().optional(),
   restaurantId: z.string().min(1).nullable(),
   receiptDate: calendarDate.nullable(),
   receiptNumber: z.string().nullable(),
@@ -55,6 +56,14 @@ export const receiptDraftSchema = z.object({
   warnings: z.array(z.string()),
 });
 export type ReceiptDraft = z.infer<typeof receiptDraftSchema>;
+
+export const receiptRestaurantSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  locationLabel: z.string(),
+});
+export type ReceiptRestaurant = z.infer<typeof receiptRestaurantSchema>;
+export const receiptRestaurantsResponseSchema = z.object({ restaurants: z.array(receiptRestaurantSchema) });
 
 export const confirmedReceiptSchema = z.object({
   draftId: z.string().min(1),

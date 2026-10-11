@@ -101,27 +101,43 @@ describe('normalizeItems', () => {
 });
 
 describe('extractReceipt', () => {
-  const successfulResponse = () => ({
+  const receiptCandidate = (overrides: Partial<{
+    restaurantName: string | null;
+    receiptDate: string | null;
+    receiptNumber: string | null;
+    totalMinor: number | null;
+    currency: string | null;
+    items: Array<{
+      originalText: string;
+      suggestedName: string;
+      quantity: number | null;
+      kind: 'food' | 'non_food';
+      confidence: 'certain' | 'uncertain';
+    }>;
+  }> = {}) => ({
+    restaurantName: 'Busy Bee Cafe',
+    receiptDate: '2026-10-01',
+    receiptNumber: null,
+    totalMinor: 1850,
+    currency: 'USD',
+    items: [{
+      originalText: 'Hny Chkn',
+      suggestedName: 'Honey chicken',
+      quantity: null,
+      kind: 'food' as const,
+      confidence: 'uncertain' as const,
+    }],
+    ...overrides,
+  });
+
+  const successfulResponse = (candidate = receiptCandidate()) => ({
     ok: true,
     status: 200,
     json: async () => ({
       candidates: [{
         content: {
           parts: [{
-            text: JSON.stringify({
-              restaurantName: 'Busy Bee Cafe',
-              receiptDate: '2026-10-01',
-              receiptNumber: null,
-              totalMinor: 1850,
-              currency: 'USD',
-              items: [{
-                originalText: 'Hny Chkn',
-                suggestedName: 'Honey chicken',
-                quantity: null,
-                kind: 'food',
-                confidence: 'uncertain',
-              }],
-            }),
+            text: JSON.stringify(candidate),
           }],
         },
       }],
@@ -142,6 +158,154 @@ describe('extractReceipt', () => {
       { originalText: 'Hny Chkn', suggestedName: 'Hny Chkn', quantity: 1 },
     ]);
     expect(draft.warnings).toContain('Review uncertain item: "Hny Chkn".');
+  });
+
+  it('requests low thinking by default on Gemini 3 Flash while preserving the extracted restaurant name', async () => {
+    const fetchImpl = vi.fn(async () => successfulResponse());
+    const draft = await extractReceipt(
+      { bytes: new Uint8Array([1, 2, 3]), mimeType: 'image/jpeg' },
+      {
+        env: { GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-3.8-flash' },
+        fetchImpl,
+        restaurants: [{ id: 'busy-bee', name: 'Busy Bee Cafe', aliases: ['Busy Bee Café'] }],
+      },
+    );
+    const requestBody = JSON.parse(fetchImpl.mock.calls[0][1].body as string);
+
+    expect(requestBody.generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'low' });
+    expect(draft.restaurantName).toBe('Busy Bee Cafe');
+    expect(draft.restaurantId).toBe('busy-bee');
+  });
+
+  it('accepts an explicit thinking-level override for Gemini 3 Flash', async () => {
+    const fetchImpl = vi.fn(async () => successfulResponse());
+
+    await extractReceipt(
+      { bytes: new Uint8Array([1]), mimeType: 'image/png' },
+      {
+        env: {
+          GEMINI_API_KEY: 'test-key',
+          GEMINI_MODEL: 'gemini-3.8-flash',
+          GEMINI_THINKING_LEVEL: 'high',
+        },
+        fetchImpl,
+      },
+    );
+    const requestBody = JSON.parse(fetchImpl.mock.calls[0][1].body as string);
+
+    expect(requestBody.generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'high' });
+  });
+
+  it('rejects invalid thinking-level overrides for Gemini 3 Flash before making a request', async () => {
+    const fetchImpl = vi.fn(async () => successfulResponse());
+
+    await expect(extractReceipt(
+      { bytes: new Uint8Array([1]), mimeType: 'image/png' },
+      {
+        env: {
+          GEMINI_API_KEY: 'test-key',
+          GEMINI_MODEL: 'gemini-3.8-flash',
+          GEMINI_THINKING_LEVEL: 'minimal',
+        },
+        fetchImpl,
+      },
+    )).rejects.toThrow('GEMINI_THINKING_LEVEL must be low, medium, or high for Gemini 3 Flash models.');
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('omits thinking configuration for older models without validating an unused override', async () => {
+    const fetchImpl = vi.fn(async () => successfulResponse());
+
+    await extractReceipt(
+      { bytes: new Uint8Array([1]), mimeType: 'image/png' },
+      {
+        env: {
+          GEMINI_API_KEY: 'test-key',
+          GEMINI_MODEL: 'gemini-2.5-flash',
+          GEMINI_THINKING_LEVEL: 'not-a-supported-level',
+        },
+        fetchImpl,
+      },
+    );
+    const requestBody = JSON.parse(fetchImpl.mock.calls[0][1].body as string);
+
+    expect(requestBody.generationConfig.thinkingConfig).toBeUndefined();
+  });
+
+  it('matches restaurant aliases accent-insensitively and keeps unmatched names for correction', async () => {
+    const fetchImpl = vi.fn(async () => successfulResponse(receiptCandidate({ restaurantName: 'Busy Bee Café' })));
+    const draft = await extractReceipt(
+      { bytes: new Uint8Array([1]), mimeType: 'image/jpeg' },
+      {
+        env: { GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-2.0-flash' },
+        fetchImpl,
+        restaurants: [{ id: 'busy-bee', name: 'Busy Bee Cafe', aliases: ['The Busy Bee'] }],
+      },
+    );
+
+    expect(draft.restaurantName).toBe('Busy Bee Café');
+    expect(draft.restaurantId).toBe('busy-bee');
+    expect(draft.warnings).not.toContain('Choose a supported restaurant before confirming this receipt.');
+  });
+
+  it('leaves unsupported and ambiguous restaurant matches unselected with a correction warning', async () => {
+    const unsupportedFetch = vi.fn(async () => successfulResponse(receiptCandidate({ restaurantName: 'Glaze Tea' })));
+    const unsupported = await extractReceipt(
+      { bytes: new Uint8Array([1]), mimeType: 'image/jpeg' },
+      {
+        env: { GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-2.0-flash' },
+        fetchImpl: unsupportedFetch,
+        restaurants: [{ id: 'busy-bee', name: 'Busy Bee Cafe', aliases: [] }],
+      },
+    );
+    expect(unsupported.restaurantName).toBe('Glaze Tea');
+    expect(unsupported.restaurantId).toBeNull();
+    expect(unsupported.warnings).toContain('Choose a supported restaurant before confirming this receipt.');
+
+    const ambiguousFetch = vi.fn(async () => successfulResponse(receiptCandidate({ restaurantName: 'Cafe' })));
+    const ambiguous = await extractReceipt(
+      { bytes: new Uint8Array([1]), mimeType: 'image/jpeg' },
+      {
+        env: { GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-2.0-flash' },
+        fetchImpl: ambiguousFetch,
+        restaurants: [
+          { id: 'cafe-one', name: 'Cafe One', aliases: ['Cafe'] },
+          { id: 'cafe-two', name: 'Cafe Two', aliases: ['Café'] },
+        ],
+      },
+    );
+    expect(ambiguous.restaurantName).toBe('Cafe');
+    expect(ambiguous.restaurantId).toBeNull();
+    expect(ambiguous.warnings).toContain('Choose a supported restaurant before confirming this receipt.');
+
+    const nonLatinFetch = vi.fn(async () => successfulResponse(receiptCandidate({ restaurantName: '茶馆' })));
+    const nonLatin = await extractReceipt(
+      { bytes: new Uint8Array([1]), mimeType: 'image/jpeg' },
+      {
+        env: { GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-2.0-flash' },
+        fetchImpl: nonLatinFetch,
+        restaurants: [{ id: 'tokyo-diner', name: '東京食堂', aliases: [] }],
+      },
+    );
+    expect(nonLatin.restaurantName).toBe('茶馆');
+    expect(nonLatin.restaurantId).toBeNull();
+    expect(nonLatin.warnings).toContain('Choose a supported restaurant before confirming this receipt.');
+  });
+
+  it('asks Gemini to keep translations and modifiers with their purchased item', async () => {
+    const fetchImpl = vi.fn(async () => successfulResponse());
+
+    await extractReceipt(
+      { bytes: new Uint8Array([1]), mimeType: 'image/png' },
+      { env: { GEMINI_API_KEY: 'test-key', GEMINI_MODEL: 'gemini-3.8-flash' }, fetchImpl },
+    );
+    const requestBody = JSON.parse(fetchImpl.mock.calls[0][1].body as string);
+    const prompt = requestBody.contents[0].parts[0].text as string;
+
+    expect(prompt.toLowerCase()).toContain('translations and modifiers');
+    expect(prompt.toLowerCase()).toContain('purchased item');
+    expect(prompt.toLowerCase()).toContain('separate items');
   });
 
   it('accepts WebP images and sends them to Gemini as image/webp', async () => {

@@ -55,6 +55,7 @@ export type ReceiptImage = {
 export type ReceiptExtractionOptions = {
   env?: Record<string, string | undefined>;
   fetchImpl?: typeof fetch;
+  restaurants?: Array<{ id: string; name: string; aliases: string[] }>;
 };
 
 class RetryableGeminiError extends Error {}
@@ -70,6 +71,7 @@ function buildPrompt(): string {
   return [
     'Read this receipt and return only facts clearly visible on it.',
     'Copy each purchased food or drink line verbatim into originalText.',
+    'Keep translations and modifiers with the purchased item; do not treat them as separate items.',
     'Exclude tax, tips, service fees, discounts, payment lines, and other non-item lines from food items.',
     'Do not invent a dish name, quantity, restaurant, date, total, or receipt number.',
     'Use null for an unreadable or absent field and for an unspecified quantity; unspecified quantity will be treated as one.',
@@ -77,6 +79,29 @@ function buildPrompt(): string {
     'Use YYYY-MM-DD for receiptDate and ISO 4217 uppercase currency codes.',
     'Return totalMinor as integer minor currency units, such as cents for USD.',
   ].join(' ');
+}
+
+function normalizeRestaurantName(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+function resolveRestaurantId(
+  name: string | null,
+  restaurants: ReceiptExtractionOptions['restaurants'],
+): string | null {
+  if (!name || !restaurants?.length) return null;
+  const normalizedName = normalizeRestaurantName(name);
+  if (!normalizedName) return null;
+  const matchingIds = new Set(restaurants
+    .filter((restaurant) => [restaurant.name, ...restaurant.aliases]
+      .some((entry) => normalizeRestaurantName(entry) === normalizedName))
+    .map((restaurant) => restaurant.id));
+  return matchingIds.size === 1 ? [...matchingIds][0] : null;
 }
 
 async function requestGemini(
@@ -127,7 +152,20 @@ export async function extractReceipt(
     throw new Error('Receipt image must be larger than zero bytes and no larger than 10 MB.');
   }
 
+  const supportsThinkingLevel = /^gemini-3(?:\.\d+)?-flash(?:-(?:preview|exp|latest))?$/i.test(model);
+  const thinkingLevel = env.GEMINI_THINKING_LEVEL ?? 'low';
+  if (supportsThinkingLevel && !['low', 'medium', 'high'].includes(thinkingLevel)) {
+    throw new Error('GEMINI_THINKING_LEVEL must be low, medium, or high for Gemini 3 Flash models.');
+  }
+
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const generationConfig: Record<string, unknown> = {
+    responseMimeType: 'application/json',
+    responseSchema,
+  };
+  if (supportsThinkingLevel) {
+    generationConfig.thinkingConfig = { thinkingLevel };
+  }
   const body = JSON.stringify({
     contents: [{
       parts: [
@@ -140,10 +178,7 @@ export async function extractReceipt(
         },
       ],
     }],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema,
-    },
+    generationConfig,
   });
   const fetchImpl = options.fetchImpl ?? fetch;
   let responseBody: unknown;
@@ -175,10 +210,12 @@ export async function extractReceipt(
   }
 
   const warnings: string[] = [];
+  const restaurantName = candidate.restaurantName?.trim() || null;
+  const restaurantId = resolveRestaurantId(restaurantName, options.restaurants);
   const receiptDate = candidate.receiptDate && isCalendarDate(candidate.receiptDate)
     ? candidate.receiptDate
     : null;
-  if (!candidate.restaurantName) warnings.push('Choose a supported restaurant before confirming this receipt.');
+  if (!restaurantId) warnings.push('Choose a supported restaurant before confirming this receipt.');
   if (!receiptDate) warnings.push('Receipt date is missing or unreadable; check the image before confirming.');
   const currency = candidate.currency && /^[A-Z]{3}$/.test(candidate.currency) ? candidate.currency : null;
   if (candidate.currency && !currency) warnings.push('Currency is unreadable; check the image before confirming.');
@@ -196,7 +233,8 @@ export async function extractReceipt(
 
   return receiptDraftSchema.parse({
     draftId: randomUUID(),
-    restaurantId: null,
+    restaurantId,
+    restaurantName,
     receiptDate,
     receiptNumber: candidate.receiptNumber,
     totalMinor: candidate.totalMinor,
