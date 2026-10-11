@@ -88,6 +88,7 @@ export function cuisineColors(key: CuisineKey): CuisineColors {
 // images are only required where the app (Metro) asks for them.
 type Art = { token: () => ImageSourcePropType; card: () => ImageSourcePropType };
 const ART: Partial<Record<CuisineKey, Art>> = {
+  burger: { token: () => require('../../../assets/cuisine/burger.png'), card: () => require('../../../assets/cuisine/burger-card.jpg') },
   pizza: { token: () => require('../../../assets/cuisine/pizza.png'), card: () => require('../../../assets/cuisine/pizza-card.jpg') },
   asian: { token: () => require('../../../assets/cuisine/asian.png'), card: () => require('../../../assets/cuisine/asian-card.jpg') },
   breakfast: { token: () => require('../../../assets/cuisine/breakfast.png'), card: () => require('../../../assets/cuisine/breakfast-card.jpg') },
