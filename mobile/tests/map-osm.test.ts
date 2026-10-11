@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeOsm, osmIcon, overpassQuery } from '../src/features/map/osm';
-import { brandTotals, normalizedName } from '../src/features/map/mapRestaurants';
+import { brandTotals, mapCardAvailability, normalizedName } from '../src/features/map/mapRestaurants';
 import { MAX_VISIBLE_RESTAURANTS, mergeNearby, sameRestaurant } from '../src/features/map/mergeNearby';
 import { createNearbySource, OverpassError } from '../src/features/map/nearbySource';
 import { discoveryArea } from '../src/features/map/discoveryArea';
@@ -100,6 +100,13 @@ describe('mergeNearby', () => {
     const merged = mergeNearby([], [osmPlace(1, 'Second', 900), osmPlace(2, 'First', 300)], area);
     expect(merged.map((pin) => pin.name)).toEqual(['First', 'Second']);
     expect(merged[0]).toMatchObject({ source: 'osm', osm: { type: 'node', id: 2 }, card: null, icon: 'plate' });
+  });
+
+  it('marks an unsupported OSM place unavailable while a catalog place can still be scanned', () => {
+    const [nearby] = mergeNearby([], [osmPlace(1, 'Nearby Only', 300)], area);
+    const [catalog] = mergeNearby([seeded('Supported Place', 300)], [], area);
+    expect(mapCardAvailability(nearby)).toBe('unavailable');
+    expect(mapCardAvailability(catalog)).toBe('scan');
   });
 
   it('caps the visible set at 40, seeded first, then the nearest OSM places', () => {
@@ -296,8 +303,10 @@ describe('chains', () => {
     ], area);
     const osm = merged.filter((pin) => pin.source === 'osm');
     expect(osm.slice(0, 3).every((pin) => pin.card === cfaCard)).toBe(true);
+    expect(mapCardAvailability(osm[0])).toBe('view');
     expect(osm[3].card).toBeNull();
-    expect(osm.map((pin) => pin.brandKey)).toEqual(['wikidata:Q491516', 'name:chick fil a', 'name:chick fil a', 'name:wendy s']);
+    expect(osm.map((pin) => pin.brandKey)).toEqual(['name:chick fil a', 'name:chick fil a', 'name:chick fil a', 'name:wendy s']);
+    expect(brandTotals(merged)).toEqual({ discovered: 1, total: 2 });
   });
 
   it('counts the locations of one brand as one restaurant', () => {

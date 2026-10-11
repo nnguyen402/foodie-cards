@@ -8,6 +8,23 @@ describe('parseRevealPayload', () => {
     expect(parseRevealPayload({ cardId: 'c1', stage: 'discovered', previousStage: null })?.previousStage).toBeNull();
   });
 
+  it('infers the prior stage from the first server stage award when previousStage is absent', () => {
+    expect(parseRevealPayload({ cardId: 'c1', stage: 'regular', stageAwards: [{ stage: 'regular', accountXP: 150 }] })?.previousStage).toBe('discovered');
+    expect(parseRevealPayload({ cardId: 'c1', stage: 'house_favorite', stageAwards: [{ stage: 'house_favorite', accountXP: 300 }] })?.previousStage).toBe('regular');
+    expect(parseRevealPayload({ cardId: 'c1', stage: 'discovered', stageAwards: [{ stage: 'discovered', accountXP: 50 }] })?.previousStage).toBeNull();
+  });
+
+  it('uses the earliest award when one receipt crosses multiple stages', () => {
+    expect(parseRevealPayload({ cardId: 'c1', stage: 'regular', stageAwards: [{ stage: 'discovered', accountXP: 50 }, { stage: 'regular', accountXP: 150 }] })?.previousStage).toBeNull();
+    expect(parseRevealPayload({ cardId: 'c1', stage: 'house_favorite', stageAwards: [{ stage: 'regular', accountXP: 150 }, { stage: 'house_favorite', accountXP: 300 }] })?.previousStage).toBe('discovered');
+  });
+
+  it('uses an explicit previousStage and keeps legacy payloads without stageAwards at null', () => {
+    expect(parseRevealPayload({ cardId: 'c1', stage: 'house_favorite', previousStage: 'discovered', stageAwards: [{ stage: 'house_favorite', accountXP: 300 }] })?.previousStage).toBe('discovered');
+    expect(parseRevealPayload({ cardId: 'c1', stage: 'regular' })?.previousStage).toBeNull();
+    expect(parseRevealPayload({ cardId: 'c1', stage: 'regular', stageAwards: [{ stage: 'unknown', accountXP: 10 }] })?.previousStage).toBeNull();
+  });
+
   it('rejects non-objects, missing card ids and unknown stages', () => {
     for (const bad of [null, undefined, 'x', 4, [], {}, { stage: 'regular' }, { cardId: '', stage: 'regular' }, { cardId: 3, stage: 'regular' }, { cardId: 'c1', stage: 'legendary' }, { cardId: 'c1' }]) {
       expect(parseRevealPayload(bad)).toBeNull();

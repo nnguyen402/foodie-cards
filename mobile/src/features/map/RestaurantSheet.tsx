@@ -6,7 +6,7 @@ import { CuisineIcon } from '../cards/CuisineIcon';
 import { stageLabel } from '../cards/stageStyles';
 import { readableTextOn } from '../cards/themes';
 import { categoryLabel } from './labels';
-import type { MapRestaurant } from './mapRestaurants';
+import { mapCardAvailability, type MapRestaurant } from './mapRestaurants';
 import { pinLook } from './pinStyle';
 
 // The preview that slides up when a token is tapped: a dark card above the tab bar.
@@ -30,6 +30,7 @@ export function RestaurantSheet({ restaurant, distance, onOpenCard, onScan, onVi
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   const { card, theme } = restaurant;
+  const availability = mapCardAvailability(restaurant);
   const look = pinLook(card?.stage ?? null);
   const details = [categoryLabel(restaurant.category), distance].filter(Boolean).join(' · ');
   const address = [restaurant.address, restaurant.neighbourhood].filter(Boolean).join(', ');
@@ -67,16 +68,19 @@ export function RestaurantSheet({ restaurant, distance, onOpenCard, onScan, onVi
           <Text allowFontScaling={false} className="text-lg font-bold" style={{ color: INK }}>×</Text>
         </Pressable>
       </View>
-      {card ? null : <Text className="text-sm font-medium" style={{ color: INK }}>Not collected yet — scan a receipt here to unlock</Text>}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={card ? `View your ${restaurant.name} card` : `Scan a receipt from ${restaurant.name} to unlock its card`}
-        onPress={() => (card ? onViewCard(card.id) : onScan())}
-        className="min-h-14 items-center justify-center rounded-2xl px-4 active:opacity-80"
-        style={{ backgroundColor: GOLD }}
-      >
-        <Text className="text-base font-extrabold" style={{ color: '#1b130b' }}>{card ? 'View card' : 'Scan receipt'}</Text>
-      </Pressable>
+      {availability === 'unavailable' ? (
+        <Text className="text-sm font-medium" style={{ color: INK }}>Nearby listing only — no card is available for this restaurant.</Text>
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={card ? `View your ${restaurant.name} card` : `Scan a receipt from ${restaurant.name} to unlock its card`}
+          onPress={() => (card ? onViewCard(card.id) : onScan())}
+          className="min-h-14 items-center justify-center rounded-2xl px-4 active:opacity-80"
+          style={{ backgroundColor: GOLD }}
+        >
+          <Text className="text-base font-extrabold" style={{ color: '#1b130b' }}>{card ? 'View card' : 'Scan receipt'}</Text>
+        </Pressable>
+      )}
     </Animated.View>
   );
 }

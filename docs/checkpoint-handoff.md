@@ -1,6 +1,14 @@
 # Project checkpoint — 2026-10-10
 
-## Current Lane A checkpoint
+## Integrated A/B/C checkpoint (October 11, 2026)
+
+The progression, receipt scanning, and cards/map/reveal PRs are integrated together. Both receipt extraction and acceptance routes are registered; confirmation opens awarded reveals, and reveal labels consume the backend's ordered stage awards. Camera and location plugins are both retained. The sections below are historical lane checkpoints and do not describe the current integration state.
+
+Verification includes the combined Vitest suite, shared/server/mobile typechecking, Expo Doctor, exports, 164 local SQL assertions, five concurrency probes, and the local Auth/PostgREST/HTTP probe. That HTTP probe now exercises multipart upload through real private storage and owned draft reload before acceptance; only its AI output is synthetic. Earlier receipt verification used three real photos with live Gemini.
+
+Deployment still requires the committed receipt draft migration on the target database, phone-reachable backend configuration, and physical-phone QA. This integration does not deploy hosted changes. OpenStreetMap-only places remain browsing entries; they cannot create restaurant cards through the supported-catalog receipt API.
+
+## Historical Lane A checkpoint
 
 Work is on `feat/lane-a-progression`; push this branch only and open a PR to `main` later. The project owner owns A, one teammate owns B+C, and another owns D. Replit is excluded. Use the existing checkout and ignored credentials. The historical foundation notes below describe the earlier checkpoint; this section supersedes their pending-work statements.
 

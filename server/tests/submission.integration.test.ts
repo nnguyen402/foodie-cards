@@ -75,8 +75,21 @@ describe('receipt submission', () => {
   });
 
   it('rejects oversized JSON request bodies with the public API error shape', async () => {
-    const response = await authed(appWith()).send({ ...confirmed, receiptNumber: 'x'.repeat(40000) }).expect(413);
+    const response = await authed(appWith()).send({ ...confirmed, receiptNumber: 'x'.repeat(600 * 1024) }).expect(413);
     expect(response.body).toMatchObject({ code: 'INVALID_REQUEST', retryable: false });
+  });
+
+  it('accepts the maximum valid item list when Unicode JSON exceeds 32 KB', async () => {
+    const acceptReceipt = vi.fn(async () => progression);
+    const items = Array.from({ length: 100 }, () => ({
+      originalText: 'é'.repeat(240), confirmedName: 'BBQ Sandwich', quantity: 1,
+    }));
+    const payload = { ...confirmed, items };
+    expect(Buffer.byteLength(JSON.stringify(payload), 'utf8')).toBeGreaterThan(32 * 1024);
+
+    const response = await authed(appWith({ acceptReceipt })).send(payload).expect(200);
+    expect(response.body).toEqual(progression);
+    expect(acceptReceipt).toHaveBeenCalledOnce();
   });
 
   it('requires a draft owned by the authenticated account', async () => {

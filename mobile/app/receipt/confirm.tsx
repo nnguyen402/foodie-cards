@@ -162,7 +162,12 @@ function ConfirmReceiptContent({ auth, userId, draftId }: { auth: ReturnType<typ
   if (error && !draft) return <ScrollView style={styles.screen} contentContainerStyle={styles.content}><MessagePanel title="Receipt draft unavailable" body={error} kind="error" /><Button label="Return to Scan" variant="secondary" onPress={() => router.replace('/(tabs)/scan')} /></ScrollView>;
   if (result) return <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
     <View style={styles.success}><AppText variant="small" strong style={styles.eyebrow}>VISIT ADDED</AppText><AppText variant="display" strong>Receipt confirmed.</AppText><AppText muted>Your visit is saved. You earned {result.xpBreakdown.totalXP} XP and now have {result.visitCount} visit{result.visitCount === 1 ? '' : 's'} at this restaurant.</AppText><AppText variant="small" muted>Card progress: {result.cardXP} XP · {result.stage}</AppText></View>
-    <Button label="Back to collection" onPress={() => router.replace('/(tabs)/collection')} />
+    <Button
+      label={result.revealEventId ? 'Reveal card' : 'Back to collection'}
+      onPress={() => result.revealEventId
+        ? router.replace({ pathname: '/reveal/[eventId]', params: { eventId: result.revealEventId } })
+        : router.replace('/(tabs)/collection')}
+    />
   </ScrollView>;
 
   return <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

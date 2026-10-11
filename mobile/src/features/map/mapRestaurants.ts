@@ -28,6 +28,13 @@ export type MapRestaurant = {
   card: CardView | null;
 };
 
+export type MapCardAvailability = 'view' | 'scan' | 'unavailable';
+
+export function mapCardAvailability(pin: Pick<MapRestaurant, 'source' | 'card'>): MapCardAvailability {
+  if (pin.card) return 'view';
+  return pin.source === 'catalog' ? 'scan' : 'unavailable';
+}
+
 type Place = CardView['restaurant'] & { latitude?: number | null; longitude?: number | null };
 
 function toPin(place: Place, card: MapRestaurant['card']): MapRestaurant | null {

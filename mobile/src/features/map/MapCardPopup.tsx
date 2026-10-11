@@ -7,7 +7,7 @@ import { RestaurantCard } from '../cards/RestaurantCard';
 import { stageLabel } from '../cards/stageStyles';
 import type { CardView } from '../cards/types';
 import { categoryLabel, flavourLine } from './labels';
-import type { MapRestaurant } from './mapRestaurants';
+import { mapCardAvailability, type MapRestaurant } from './mapRestaurants';
 
 // The full card, shown over the map: our own stage frame with the restaurant's name, a
 // flavour line and, for a collected restaurant, its real XP and visits. An uncollected
@@ -34,6 +34,7 @@ export function MapCardPopup({ restaurant, imageUrl, onScan, onViewCard, onClose
   const { width, height } = useWindowDimensions();
   const cardWidth = Math.floor(Math.max(160, Math.min(CARD_MAX_WIDTH, width - 72, (height - insets.top - insets.bottom - 300) / 1.4)));
   const { card } = restaurant;
+  const availability = mapCardAvailability(restaurant);
   // An uncollected restaurant has no card yet, so the frame is filled from the catalog alone.
   const shown = useMemo<CardView>(() => card ?? {
     id: `preview-${restaurant.id}`, stage: 'discovered', cardXP: 0, visitCount: 0, lastVisitDate: null, rating: null,
@@ -53,6 +54,9 @@ export function MapCardPopup({ restaurant, imageUrl, onScan, onViewCard, onClose
             {categoryLabel(restaurant.category)} · {card ? stageLabel(card.stage) : 'Not collected yet'}
           </Text>
           <Text className="text-center text-base font-medium italic" style={{ color: INK }}>{flavourLine(restaurant.category)}</Text>
+          {availability === 'unavailable' ? (
+            <Text className="text-center text-sm font-semibold" style={{ color: INK_MUTED }}>Nearby listing only · no card is available for this restaurant.</Text>
+          ) : null}
           {card ? (
             <Text className="text-sm font-semibold" style={{ color: INK_MUTED }}>
               {card.cardXP} XP · {card.visitCount} {card.visitCount === 1 ? 'visit' : 'visits'}
@@ -63,15 +67,17 @@ export function MapCardPopup({ restaurant, imageUrl, onScan, onViewCard, onClose
           <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} className="min-h-12 flex-1 items-center justify-center rounded-2xl active:opacity-70" style={{ backgroundColor: 'rgba(246,237,226,0.14)' }}>
             <Text className="text-base font-bold" style={{ color: INK }}>Close</Text>
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={card ? `View your ${restaurant.name} card details` : `Scan a receipt from ${restaurant.name}`}
-            onPress={() => (card ? onViewCard(card.id) : onScan())}
-            className="min-h-12 flex-1 items-center justify-center rounded-2xl active:opacity-80"
-            style={{ backgroundColor: GOLD }}
-          >
-            <Text className="text-base font-extrabold" style={{ color: '#1b130b' }}>{card ? 'Card details' : 'Scan receipt'}</Text>
-          </Pressable>
+          {availability === 'unavailable' ? null : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={card ? `View your ${restaurant.name} card details` : `Scan a receipt from ${restaurant.name}`}
+              onPress={() => (card ? onViewCard(card.id) : onScan())}
+              className="min-h-12 flex-1 items-center justify-center rounded-2xl active:opacity-80"
+              style={{ backgroundColor: GOLD }}
+            >
+              <Text className="text-base font-extrabold" style={{ color: '#1b130b' }}>{card ? 'Card details' : 'Scan receipt'}</Text>
+            </Pressable>
+          )}
         </View>
       </Animated.View>
     </Animated.View>

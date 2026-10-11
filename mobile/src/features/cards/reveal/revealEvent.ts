@@ -2,14 +2,31 @@ import { restaurantStageSchema, type RestaurantStage } from '@foodie-cards/share
 
 export type RevealPayload = { cardId: string; stage: RestaurantStage; previousStage: RestaurantStage | null };
 
-// The server has not fixed the card_stage payload yet, so accept only what is clearly valid.
+const PREVIOUS_STAGE: Record<RestaurantStage, RestaurantStage | null> = {
+  discovered: null,
+  regular: 'discovered',
+  house_favorite: 'regular',
+};
+
+function previousStageFromAwards(value: unknown): RestaurantStage | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const first = value[0];
+  if (typeof first !== 'object' || first === null || Array.isArray(first)) return null;
+  const stage = restaurantStageSchema.safeParse((first as Record<string, unknown>).stage);
+  return stage.success ? PREVIOUS_STAGE[stage.data] : null;
+}
+
+// Older card_stage events may omit stageAwards; the current server includes them.
 export function parseRevealPayload(payload: unknown): RevealPayload | null {
   if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return null;
-  const { cardId, stage, previousStage } = payload as Record<string, unknown>;
+  const { cardId, stage, previousStage, stageAwards } = payload as Record<string, unknown>;
   if (typeof cardId !== 'string' || cardId === '') return null;
   const parsedStage = restaurantStageSchema.safeParse(stage);
   if (!parsedStage.success) return null;
-  if (previousStage === undefined || previousStage === null) return { cardId, stage: parsedStage.data, previousStage: null };
+  if (previousStage === undefined) {
+    return { cardId, stage: parsedStage.data, previousStage: previousStageFromAwards(stageAwards) };
+  }
+  if (previousStage === null) return { cardId, stage: parsedStage.data, previousStage: null };
   const parsedPrevious = restaurantStageSchema.safeParse(previousStage);
   if (!parsedPrevious.success) return null;
   return { cardId, stage: parsedStage.data, previousStage: parsedPrevious.data };

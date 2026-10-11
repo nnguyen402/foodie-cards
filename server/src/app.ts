@@ -61,7 +61,7 @@ export function createApp(
 ): Express {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: '32kb' }));
+  app.use(express.json({ limit: '512kb' }));
 
   app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
 

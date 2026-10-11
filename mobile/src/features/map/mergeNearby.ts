@@ -20,14 +20,16 @@ const brandKeyOf = (place: OsmPlace) => (place.brandWikidata ? `wikidata:${place
 
 /** The pin for one location. A location of a chain the user owns shows that brand's card. */
 function toPin(place: OsmPlace, owned: Map<string, MapRestaurant>): MapRestaurant {
-  const brandKey = brandKeyOf(place);
-  const brandOwner = owned.get(brandKey) ?? owned.get(nameKey(place));
+  const matchedBrandKey = brandKeyOf(place);
+  const brandOwner = owned.get(matchedBrandKey) ?? owned.get(nameKey(place));
   return {
     id: place.key,
     source: 'osm',
     osm: { type: place.osmType, id: place.osmId },
     name: place.name,
-    brandKey,
+    // Catalog brands are name-keyed; reuse that canonical key for matched OSM aliases,
+    // including branches whose OSM record carries a separate Wikidata id.
+    brandKey: brandOwner?.brandKey ?? matchedBrandKey,
     neighbourhood: place.city ?? '',
     address: place.address ?? '',
     category: place.cuisine ?? place.amenity,
