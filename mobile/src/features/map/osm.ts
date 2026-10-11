@@ -18,12 +18,14 @@ export type OsmPlace = {
   city: string | null;
 };
 
-// More than the map will show, so the nearest ones can be picked after measuring real distance.
-const RESPONSE_LIMIT = 600;
+// Kept small so the shared servers answer quickly. Overpass cannot sort by distance, so in a
+// very dense area these are not guaranteed to be the nearest places, only real ones in range.
+const RESPONSE_LIMIT = 120;
+const SERVER_TIMEOUT_SECONDS = 25;
 
 export function overpassQuery(centre: Coordinate, radiusMetres: number): string {
   const around = `around:${radiusMetres},${centre.latitude},${centre.longitude}`;
-  return `[out:json][timeout:20];nwr["amenity"~"^(restaurant|fast_food|cafe)$"]["name"](${around});out tags center ${RESPONSE_LIMIT};`;
+  return `[out:json][timeout:${SERVER_TIMEOUT_SECONDS}];nwr["amenity"~"^(restaurant|fast_food|cafe)$"]["name"](${around});out tags center ${RESPONSE_LIMIT};`;
 }
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value.trim() !== '' ? value.trim() : null);

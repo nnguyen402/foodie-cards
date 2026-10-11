@@ -3,6 +3,8 @@ import { normalizeOsm, osmIcon, overpassQuery } from '../src/features/map/osm';
 import { MAX_VISIBLE_RESTAURANTS, mergeNearby, sameRestaurant } from '../src/features/map/mergeNearby';
 import { createNearbySource, OverpassError } from '../src/features/map/nearbySource';
 import { discoveryArea } from '../src/features/map/discoveryArea';
+import { OFFLINE_SNAPSHOT, offlinePlaces } from '../src/features/map/offlineSnapshot';
+import { distanceKm } from '../src/features/map/coordinates';
 import type { MapRestaurant } from '../src/features/map/mapRestaurants';
 
 const suwanee = { latitude: 34.0515, longitude: -84.0713 };
@@ -15,7 +17,8 @@ describe('overpassQuery', () => {
   it('asks for named restaurants, fast food and cafes around the centre', () => {
     const query = overpassQuery(suwanee, 5000);
     expect(query).toContain('nwr["amenity"~"^(restaurant|fast_food|cafe)$"]["name"](around:5000,34.0515,-84.0713)');
-    expect(query).toContain('out tags center');
+    expect(query).toContain('[timeout:25]');
+    expect(query).toContain('out tags center 120;');
   });
 });
 
@@ -177,7 +180,7 @@ describe('nearby source', () => {
   });
 
   it('fails with the last reason when every mirror fails, and does not cache the failure', async () => {
-    const { source, calls, logs } = setup([reply(500), down, reply(504), ok]);
+    const { source, calls, logs } = setup([reply(500), down, reply(500), ok]);
     await expect(source.load(suwanee)).rejects.toBeInstanceOf(OverpassError);
     expect(logs).toHaveLength(3);
     expect(logs[0]).toContain('HTTP 500');
@@ -221,5 +224,54 @@ describe('nearby source', () => {
     expect(await make().restore({ latitude: 33.749, longitude: -84.388 })).toBeNull();
     for (const key of Object.keys(saved)) saved[key] = '{broken';
     expect(await make().restore(suwanee)).toBeNull();
+  });
+});
+
+describe('504 handling', () => {
+  const body = { elements: [element({ id: 5 })] };
+  const reply = (status: number) => () => Promise.resolve({ ok: status === 200, status, headers: { get: () => null }, json: () => Promise.resolve(body) });
+  const run = async (responses: (() => Promise<unknown>)[]) => {
+    const calls: { url: string; body: string }[] = [];
+    const fetcher = (url: string, init: { body: string }) => {
+      calls.push({ url, body: decodeURIComponent(init.body) });
+      return (responses[calls.length - 1] ?? reply(200))();
+    };
+    const source = createNearbySource({ fetcher: fetcher as never, now: () => 0, sleep: async () => {} });
+    const result = await source.load(suwanee).then((places) => places.length, () => 'failed');
+    return { calls, result };
+  };
+
+  it('retries the same endpoint once with a 3 km radius', async () => {
+    const { calls, result } = await run([reply(504), reply(200)]);
+    expect(result).toBe(1);
+    expect(calls.map((call) => call.url.split('/')[2])).toEqual(['overpass-api.de', 'overpass-api.de']);
+    expect(calls[0].body).toContain('around:5000');
+    expect(calls[1].body).toContain('around:3000');
+  });
+
+  it('moves to the next mirror when the smaller circle also times out', async () => {
+    const { calls, result } = await run([reply(504), reply(504), reply(200)]);
+    expect(result).toBe(1);
+    expect(calls.map((call) => call.url.split('/')[2])).toEqual(['overpass-api.de', 'overpass-api.de', 'overpass.kumi.systems']);
+    expect(calls[2].body).toContain('around:5000');
+  });
+});
+
+describe('offline snapshot', () => {
+  it('holds real, complete OpenStreetMap places around GSU', () => {
+    expect(OFFLINE_SNAPSHOT.label).toBe('offline snapshot');
+    expect(OFFLINE_SNAPSHOT.places.length).toBeGreaterThanOrEqual(40);
+    const keys = OFFLINE_SNAPSHOT.places.map((place) => place.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const place of OFFLINE_SNAPSHOT.places) {
+      expect(place.key).toBe(`osm:${place.osmType}/${place.osmId}`);
+      expect(place.name.trim()).not.toBe('');
+      expect(distanceKm(place.coordinate, OFFLINE_SNAPSHOT.centre) * 1000).toBeLessThanOrEqual(OFFLINE_SNAPSHOT.coverageMetres + 1);
+    }
+  });
+
+  it('fills the map around GSU and offers nothing where it does not reach', () => {
+    expect(mergeNearby([], offlinePlaces(OFFLINE_SNAPSHOT.centre), discoveryArea(OFFLINE_SNAPSHOT.centre))).toHaveLength(40);
+    expect(offlinePlaces(suwanee)).toEqual([]);
   });
 });

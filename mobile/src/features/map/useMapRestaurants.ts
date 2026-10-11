@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCollection } from '../cards/useCollection';
-import type { DiscoveryArea } from './discoveryArea';
+import { inDiscoveryArea, type DiscoveryArea } from './discoveryArea';
+import { offlinePlaces } from './offlineSnapshot';
 import { buildMapRestaurants, type MapRestaurant } from './mapRestaurants';
 import { mergeNearby } from './mergeNearby';
 import { createNearbySource } from './nearbySource';
@@ -55,7 +56,11 @@ export function useMapRestaurants(area: DiscoveryArea | null): MapRestaurants {
       setPlaces(loaded);
       setNearby('ready');
     } catch {
-      if (token === request.current) setNearby('failed');
+      if (token !== request.current) return;
+      // Last resort when nothing live or saved covers this area: the bundled offline snapshot, where it reaches.
+      const area = { centre, fallback: false };
+      setPlaces((current) => (current.some((place) => inDiscoveryArea(place.coordinate, area)) ? current : offlinePlaces(centre)));
+      setNearby('failed');
     }
   }, [latitude, longitude]);
 

@@ -14,7 +14,10 @@ export const OVERPASS_ENDPOINTS = [
 ] as const;
 const USER_AGENT = 'FoodieCards/1.0 (Hacklanta student project; https://github.com/nnguyen402/foodie-cards)';
 const CACHE_MS = 30 * 60 * 1000;
-const TIMEOUT_MS = 15 * 1000;
+// A little longer than the 25 s the query allows the server.
+const TIMEOUT_MS = 28 * 1000;
+// A smaller circle to ask for when the server times out on the full one.
+const REDUCED_RADIUS_METRES = 3000;
 const REST_MS = 60 * 1000;
 // A short, growing wait before moving on to the next mirror.
 const NEXT_MIRROR_MS = 500;
@@ -56,7 +59,7 @@ export function createNearbySource({ fetcher, now = Date.now, storage = null, sl
   const inFlight = new Map<string, Promise<OsmPlace[]>>();
   const restingUntil = new Map<string, number>();
 
-  async function ask(endpoint: string, centre: Coordinate): Promise<OsmPlace[]> {
+  async function ask(endpoint: string, centre: Coordinate, radiusMetres = DISCOVERY_RADIUS_METRES): Promise<OsmPlace[]> {
     const controller = typeof AbortController === 'undefined' ? null : new AbortController();
     let timedOut = false;
     const timeout = setTimeout(() => {
@@ -67,9 +70,15 @@ export function createNearbySource({ fetcher, now = Date.now, storage = null, sl
       const response = await fetcher(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json', 'User-Agent': USER_AGENT },
-        body: `data=${encodeURIComponent(overpassQuery(centre, DISCOVERY_RADIUS_METRES))}`,
+        body: `data=${encodeURIComponent(overpassQuery(centre, radiusMetres))}`,
         signal: controller?.signal,
       });
+      if (response.status === 504 && radiusMetres > REDUCED_RADIUS_METRES) {
+        // The server ran out of time: ask this endpoint once more for a smaller circle.
+        log(`[nearby] ${host(endpoint)} failed: HTTP 504, retrying with ${REDUCED_RADIUS_METRES / 1000} km`);
+        clearTimeout(timeout);
+        return await ask(endpoint, centre, REDUCED_RADIUS_METRES);
+      }
       if (response.status === 429 || response.status === 504) {
         const retryAfter = Number(response.headers.get('Retry-After'));
         restingUntil.set(endpoint, now() + (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : REST_MS));
