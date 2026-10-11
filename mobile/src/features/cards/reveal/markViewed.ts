@@ -1,19 +1,38 @@
+import { revealAcknowledgementResponseSchema } from '@foodie-cards/shared';
 import { supabase } from '@/lib/supabase';
 import { isDemoEventId, markRevealHandled } from './revealEvent';
 
-// Tells the server the reveal was seen. The route may not exist yet, so failures are swallowed.
+// A completed animation is only dismissed from recovery after the server saves it.
 export async function markRewardViewed(eventId: string): Promise<void> {
   if (!eventId || isDemoEventId(eventId)) return;
-  markRevealHandled(eventId);
+  const base = process.env.EXPO_PUBLIC_API_URL;
+  if (!base || !supabase) throw new Error('The reveal service is not configured.');
+  const { data, error } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (error || !token) throw new Error('Sign in again to save this reveal.');
+  const url = `${base.replace(/\/+$/, '')}/api/rewards/${encodeURIComponent(eventId)}/viewed`;
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error('The reveal save timed out.'));
+    }, 10_000);
+  });
   try {
-    const base = process.env.EXPO_PUBLIC_API_URL;
-    if (!base || !supabase) return;
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) return;
-    const url = `${base.replace(/\/+$/, '')}/api/rewards/${encodeURIComponent(eventId)}/viewed`;
-    await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
+    await Promise.race([timeout, (async () => {
+      const response = await fetch(url, {
+        method: 'POST', signal: controller.signal,
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error('The reveal could not be saved. Try again.');
+      const result = revealAcknowledgementResponseSchema.safeParse(await response.json());
+      if (!result.success || result.data.eventId !== eventId) throw new Error('The reveal could not be saved. Try again.');
+    })()]);
   } catch {
-    // Best effort only.
+    throw new Error('The reveal could not be saved. Check your connection and retry.');
+  } finally {
+    clearTimeout(timer);
   }
+  markRevealHandled(eventId);
 }

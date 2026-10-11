@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { File } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,6 +12,7 @@ import { colors, radius, spacing } from '@/theme/tokens';
 import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
 import { createReceiptApi, type ReceiptImageUpload } from '@/features/receipts/receipt-api';
+import { prepareWebReceiptBlob } from '@/features/receipts/receipt-image';
 import { createReceiptFlowState } from '@/features/receipts/receipt-state';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -40,10 +41,17 @@ async function prepareReceiptImage(asset: ImagePicker.ImagePickerAsset): Promise
     compress: 0.85,
     format: ImageManipulator.SaveFormat.JPEG,
   });
+  const timestamp = Date.now();
+  if (Platform.OS === 'web') {
+    const file = await prepareWebReceiptBlob(image.uri);
+    const extension = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+    const name = `receipt-${timestamp}.${extension}`;
+    return { uri: image.uri, name, type: file.type as ReceiptImageUpload['type'], file, previewUri: image.uri };
+  }
   const file = new File(image.uri);
   if (!file.exists || file.size <= 0) throw new Error('The edited image could not be opened. Choose the receipt again.');
   if (file.size > MAX_IMAGE_BYTES) throw new Error('This receipt image is still over 10 MB after compression. Choose another photo.');
-  return { uri: image.uri, name: `receipt-${Date.now()}.jpg`, type: 'image/jpeg', previewUri: image.uri };
+  return { uri: image.uri, name: `receipt-${timestamp}.jpg`, type: 'image/jpeg', previewUri: image.uri };
 }
 
 export default function ScanScreen() {

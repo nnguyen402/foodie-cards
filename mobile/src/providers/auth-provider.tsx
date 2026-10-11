@@ -4,6 +4,7 @@ import { AppState, Platform } from 'react-native';
 import { avatarKeySchema, profileSchema, type Profile } from '@foodie-cards/shared';
 import { createSessionScope, type SessionSnapshot } from '@/lib/session-scope';
 import { supabase, supabaseConfig } from '@/lib/supabase';
+import { profileRefreshState, resolveCurrentSession } from './profile-refresh';
 
 export type AuthStatus = 'loading' | 'signed-out' | 'signed-in' | 'profile-error' | 'misconfigured';
 type SignupDetails = { email: string; password: string; displayName: string; avatarKey: string };
@@ -37,6 +38,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const scope = useRef(createSessionScope());
+  const activeSession = useRef<Session | null>(null);
 
   const loadProfile = useCallback(async (nextSession: Session, snapshot: SessionSnapshot, isActive: () => boolean) => {
     if (!supabase) return;
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const applySession = useCallback((nextSession: Session | null, isActive: () => boolean) => {
     const snapshot = scope.current.transitionTo(nextSession?.user.id ?? null);
+    activeSession.current = nextSession;
     setSession(nextSession);
     setProfile(null);
     setProfileError(null);
@@ -131,6 +134,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       subscription.unsubscribe();
       appStateSubscription?.remove();
       if (Platform.OS !== 'web') void client.auth.stopAutoRefresh();
+      activeSession.current = null;
       scope.current.transitionTo(null);
     };
   }, [applySession]);
@@ -172,6 +176,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const signOut = useCallback(async () => {
     if (!supabase) return;
     scope.current.transitionTo(null);
+    activeSession.current = null;
     setStatus('loading');
     setSession(null);
     setProfile(null);
@@ -189,13 +194,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [applySession]);
 
   const refreshProfile = useCallback(async () => {
-    if (!session) return;
-    const snapshot = scope.current.transitionTo(session.user.id);
-    setProfile(null);
+    const currentSession = resolveCurrentSession(session, activeSession.current);
+    if (!currentSession) return;
+    const snapshot = scope.current.transitionTo(currentSession.user.id);
+    const refreshState = profileRefreshState(status, profile, currentSession.user.id);
+    setProfile(refreshState.profile);
     setProfileError(null);
-    setStatus('loading');
-    await loadProfile(session, snapshot, () => true);
-  }, [loadProfile, session]);
+    setStatus(refreshState.status);
+    await loadProfile(currentSession, snapshot, () => true);
+  }, [loadProfile, profile, session, status]);
 
   const value = useMemo<AuthContextValue>(() => ({
     status,

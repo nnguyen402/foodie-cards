@@ -43,20 +43,33 @@ describe('receipt API', () => {
     expect(new Headers(fetcher.mock.calls[0][1]?.headers).get('Authorization')).toBe('Bearer fresh-access-token');
   });
 
-  it('posts the selected image as multipart and returns the server saved draft', async () => {
+  it('posts a browser Blob as multipart with a filename and returns the server saved draft', async () => {
     const fetcher = mockFetch().mockResolvedValue(jsonResponse(draft));
-    const fields: Array<[string, unknown]> = [];
-    const formDataFactory = () => ({ append: (key: string, value: unknown) => fields.push([key, value]) }) as unknown as FormData;
+    const fields: Array<[string, unknown, string?]> = [];
+    const formDataFactory = () => ({ append: (key: string, value: unknown, filename?: string) => fields.push([key, value, filename]) }) as unknown as FormData;
     const api = createReceiptApi({ baseUrl: 'https://api.example.test', fetcher, formDataFactory });
-    const image = { uri: 'file:///cache/receipt.jpg', name: 'receipt.jpg', type: 'image/jpeg' as const };
+    const blob = new Blob(['receipt image'], { type: 'image/jpeg' });
+    const image = { uri: 'blob:https://app.example.test/receipt', name: 'receipt.jpg', type: 'image/jpeg' as const, file: blob };
 
     await expect(api.extractReceipt('fresh-access-token', image)).resolves.toEqual(draft);
     expect(fetcher.mock.calls[0][0]).toBe('https://api.example.test/api/receipts/extract');
-    expect(fields).toEqual([['image', image]]);
+    expect(fields).toEqual([['image', blob, 'receipt.jpg']]);
     const init = fetcher.mock.calls[0][1];
     expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer fresh-access-token');
     expect(new Headers(init?.headers).has('Content-Type')).toBe(false);
     expect(init?.body).toBeDefined();
+  });
+
+  it('keeps native URI uploads in the React Native multipart shape', async () => {
+    const fetcher = mockFetch().mockResolvedValue(jsonResponse(draft));
+    const fields: Array<[string, unknown, string?]> = [];
+    const formDataFactory = () => ({ append: (key: string, value: unknown, filename?: string) => fields.push([key, value, filename]) }) as unknown as FormData;
+    const api = createReceiptApi({ baseUrl: 'https://api.example.test', fetcher, formDataFactory });
+    const image = { uri: 'file:///cache/receipt.jpg', name: 'receipt.jpg', type: 'image/jpeg' as const };
+
+    await expect(api.extractReceipt('fresh-access-token', image)).resolves.toEqual(draft);
+    expect(fields).toEqual([['image', image, undefined]]);
+    expect(new Headers(fetcher.mock.calls[0][1]?.headers).has('Content-Type')).toBe(false);
   });
 
   it('loads only the requested saved draft and validates the response', async () => {

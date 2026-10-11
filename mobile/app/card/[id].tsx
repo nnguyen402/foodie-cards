@@ -11,8 +11,9 @@ import { cuisineKeyFor } from '@/features/cards/cuisineArt';
 import { abilityLine } from '@/features/map/labels';
 import { RarityBackground } from '@/features/cards/RarityBackground';
 import { DETAIL_BACKGROUND, nextStageGoal, stageLabel, stageTheme } from '@/features/cards/stageStyles';
-import { ratingLabel } from '@/features/cards/themes';
 import { useCardDetail } from '@/features/cards/useCardDetail';
+import { PrivateRouteGuard } from '@/features/auth/PrivateRouteGuard';
+import { ReviewEditor } from '@/features/reviews/review-editor';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -44,7 +45,7 @@ function GoalRow({ label, value, met, last }: { label: string; value: string; me
   );
 }
 
-export default function CardDetailScreen() {
+function CardDetailContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
@@ -64,7 +65,7 @@ export default function CardDetailScreen() {
   } else if (state.status === 'not-found') {
     content = <MessagePanel title="Card not found" body="This card isn’t in your collection." actionLabel="Back to collection" onAction={() => router.replace('/collection')} />;
   } else {
-    const { card, visits, dishes, reviewText } = state.detail;
+    const { card, visits, dishes } = state.detail;
     const goal = nextStageGoal(card.stage);
     const visitText = (count: number) => `${count} ${count === 1 ? 'visit' : 'visits'}`;
     content = (
@@ -131,11 +132,7 @@ export default function CardDetailScreen() {
           )}
         </Section>
 
-        {/* The rating/review editor (profile lane) mounts in this section, replacing the read-only rows. */}
-        <Section title="Your rating">
-          <Row last={reviewText === ''}><AppText strong>{ratingLabel(card.rating)}</AppText></Row>
-          {reviewText === '' ? null : <Row last><AppText selectable>{reviewText}</AppText></Row>}
-        </Section>
+        <ReviewEditor restaurantId={card.restaurant.id} onSaved={() => void refresh()} />
       </>
     );
   }
@@ -157,6 +154,14 @@ export default function CardDetailScreen() {
         {content}
       </ScrollView>
     </View>
+  );
+}
+
+export default function CardDetailScreen() {
+  return (
+    <PrivateRouteGuard>
+      <CardDetailContent />
+    </PrivateRouteGuard>
   );
 }
 

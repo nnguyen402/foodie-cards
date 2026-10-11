@@ -5,7 +5,7 @@ import { createReceiptDependencies } from './receipts/store.js';
 
 export function startServer(): ReturnType<ReturnType<typeof createApp>['listen']> {
   const port = Number(process.env.PORT ?? 3000);
-  const app = createApp(createSupabaseDependencies(), createReceiptDependencies());
+  const app = createApp(createSupabaseDependencies(), createReceiptDependencies(), process.env.CORS_ALLOWED_ORIGINS);
   return app.listen(port, () => {
     process.stdout.write(`Foodie Cards API listening on port ${port}\n`);
   });

@@ -27,6 +27,9 @@ export type RevealSequenceProps = {
   /** Called once: when the animation reaches its end or Skip is pressed. */
   onViewed: () => void;
   onClose: () => void;
+  viewedStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  viewedError?: string;
+  onRetryViewed?: () => void;
 };
 
 type Phase = 'sealed' | 'playing' | 'done';
@@ -66,7 +69,7 @@ const promptPulse = { '0%': { opacity: 0.45 }, '50%': { opacity: 1 }, '100%': { 
 const summaryFade = { from: { opacity: 0, transform: [{ translateY: 8 }] }, to: { opacity: 1, transform: [{ translateY: 0 }] } } as const;
 const glowFade = { from: { opacity: 0 }, to: { opacity: 1 } } as const;
 
-export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClose }: RevealSequenceProps) {
+export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClose, viewedStatus, viewedError, onRetryViewed }: RevealSequenceProps) {
   const reducedMotion = useReducedMotion();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -106,7 +109,8 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
   onViewedRef.current = onViewed;
 
   const topReserve = insets.top + SKIP_ROW + (demoLabel ? DEMO_ROW : 0) + TITLE_BLOCK;
-  const availableHeight = Math.max(0, windowHeight - topReserve - insets.bottom - BOTTOM_BLOCK);
+  const bottomReserve = viewedStatus === 'error' ? BOTTOM_BLOCK + 120 : BOTTOM_BLOCK;
+  const availableHeight = Math.max(0, windowHeight - topReserve - insets.bottom - bottomReserve);
   const cardWidth = Math.floor(Math.max(120, Math.min(CARD_MAX_WIDTH, windowWidth * CARD_WIDTH_SHARE, availableHeight / (1.4 * FIT_SCALE))));
   const rects = useMemo(() => frameRects(cardWidth), [cardWidth]);
   const pack = useMemo(() => packSize(cardWidth), [cardWidth]);
@@ -415,7 +419,14 @@ export function RevealSequence({ card, previousStage, demoLabel, onViewed, onClo
         {resting ? (
           <Animated.View style={[styles.summary, reducedMotion ? null : { animationName: summaryFade, animationDuration: 300, animationFillMode: 'both' }]}>
             <Text style={styles.summaryText}>{summary}</Text>
-            <Button label="Done" onPress={onClose} />
+            {viewedStatus === 'saving' ? <Text style={styles.summaryText}>Saving reveal…</Text> : null}
+            {viewedStatus === 'error' ? (
+              <>
+                <Text accessibilityRole="alert" style={styles.summaryText}>{viewedError ?? 'The reveal could not be saved. Retry or return later.'}</Text>
+                <Button label="Retry saving reveal" variant="secondary" onPress={onRetryViewed} />
+              </>
+            ) : null}
+            <Button label="Done" loading={viewedStatus === 'saving'} onPress={onClose} />
           </Animated.View>
         ) : null}
       </View>
