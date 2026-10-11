@@ -148,7 +148,7 @@ export default function CollectionScreen() {
             </View>
           </View>
         ) : null}
-        {__DEV__ ? <Button label="Open card gallery (demo data)" variant="secondary" onPress={() => router.push('/dev/cards')} /> : null}
+        {__DEV__ ? <Button label="Preview card reveals" variant="secondary" onPress={() => router.push('/dev/cards')} /> : null}
       </>
     );
   }
