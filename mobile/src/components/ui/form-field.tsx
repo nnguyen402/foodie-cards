@@ -1,15 +1,25 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type TextStyle } from 'react-native';
 import { AppText } from './app-text';
 import { colors, radius, spacing, type as typeScale } from '@/theme/tokens';
 
-type FormFieldProps = TextInputProps & { label: string; error?: string; hint?: string; testID?: string };
+type FormFieldProps = TextInputProps & {
+  label: string;
+  error?: string;
+  hint?: string;
+  testID?: string;
+  /** Optional overrides for screens with their own look. Defaults leave the shared style unchanged. */
+  labelStyle?: StyleProp<TextStyle>;
+  inputStyle?: StyleProp<TextStyle>;
+  focusedInputStyle?: StyleProp<TextStyle>;
+  hintStyle?: StyleProp<TextStyle>;
+};
 
-export function FormField({ label, error, hint, testID, onFocus, onBlur, ...inputProps }: FormFieldProps) {
+export function FormField({ label, error, hint, testID, onFocus, onBlur, labelStyle, inputStyle, focusedInputStyle, hintStyle, ...inputProps }: FormFieldProps) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={styles.wrap}>
-      <AppText variant="small" strong>{label}</AppText>
+      <AppText variant="small" strong style={labelStyle}>{label}</AppText>
       <TextInput
         accessibilityLabel={label}
         allowFontScaling
@@ -20,10 +30,10 @@ export function FormField({ label, error, hint, testID, onFocus, onBlur, ...inpu
         testID={testID}
         onFocus={(event) => { setFocused(true); onFocus?.(event); }}
         onBlur={(event) => { setFocused(false); onBlur?.(event); }}
-        style={[styles.input, focused ? styles.focused : undefined, error ? styles.invalid : undefined]}
+        style={[styles.input, inputStyle, focused ? [styles.focused, focusedInputStyle] : undefined, error ? styles.invalid : undefined]}
         {...inputProps}
       />
-      {error ? <AppText variant="small" style={styles.error}>{error}</AppText> : hint ? <AppText variant="small" muted>{hint}</AppText> : null}
+      {error ? <AppText variant="small" style={styles.error}>{error}</AppText> : hint ? <AppText variant="small" muted style={hintStyle}>{hint}</AppText> : null}
     </View>
   );
 }
