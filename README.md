@@ -9,6 +9,7 @@ The foundation code checkpoint includes Expo mobile authentication and native ta
 - [Product requirements document — start here](docs/PRD.md)
 - [Full build plan and product rules](docs/foodie-cards-plan.md)
 - [Team ownership and integration workflow](docs/team-workflow.md)
+- [Shared mobile UI setup and teammate guidance](docs/ui-foundation.md)
 - [Local setup, Supabase configuration, and iPhone checks](docs/setup.md)
 - [Foundation interfaces and lane handoff](docs/foundation-handoff.md)
 - [Checkpoint status and next-agent handoff](docs/checkpoint-handoff.md)
