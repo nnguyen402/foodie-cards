@@ -12,7 +12,7 @@ import { circleRing } from './fog';
 import { MapCardPopup } from './MapCardPopup';
 import { MapAtmosphere } from './MapAtmosphere';
 import { MapHud } from './MapHud';
-import { discoveredCount, type MapRestaurant } from './mapRestaurants';
+import { brandTotals, type MapRestaurant } from './mapRestaurants';
 import { animatedPinIds, type Region } from './pinMotion';
 import { PIN_CENTRE_OFFSET, PIN_POP_MS, RestaurantPin } from './RestaurantPin';
 import { RestaurantSheet } from './RestaurantSheet';
@@ -86,6 +86,7 @@ export function GameMap() {
   const shownArea = area ?? discoveryArea(null);
   const searching = searchingKey !== null && searchingKey === areaKey(area) && data.settledFor !== searchingKey;
   const nearby = data.restaurants;
+  const brands = useMemo(() => brandTotals(nearby), [nearby]);
   const restaurants = useMemo(() => (collectedOnly ? nearby.filter((restaurant) => restaurant.card) : nearby), [nearby, collectedOnly]);
   const player = area && !area.fallback ? location.coordinate : null;
   const initialCamera = useRef(flat(discoveryArea(null).centre, HIGH)).current;
@@ -211,8 +212,8 @@ export function GameMap() {
 
       <MapAtmosphere />
       <MapHud
-        discovered={discoveredCount(nearby)}
-        total={nearby.length}
+        discovered={brands.discovered}
+        total={brands.total}
         areaLabel={areaLabel(shownArea, searched ? searched.name ?? 'Selected area' : location.placeName)}
         collectedOnly={collectedOnly}
         onToggleCollectedOnly={() => {

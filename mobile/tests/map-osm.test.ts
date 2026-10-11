@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeOsm, osmIcon, overpassQuery } from '../src/features/map/osm';
+import { brandTotals, normalizedName } from '../src/features/map/mapRestaurants';
 import { MAX_VISIBLE_RESTAURANTS, mergeNearby, sameRestaurant } from '../src/features/map/mergeNearby';
 import { createNearbySource, OverpassError } from '../src/features/map/nearbySource';
 import { discoveryArea } from '../src/features/map/discoveryArea';
@@ -25,7 +26,7 @@ describe('overpassQuery', () => {
 describe('normalizeOsm', () => {
   it('keeps the namespaced id, name, coordinates, cuisine and address of a node', () => {
     const [place] = normalizeOsm({ elements: [element({ id: 42, tags: { amenity: 'restaurant', name: 'Pho Corner', cuisine: 'vietnamese;noodle', 'addr:housenumber': '310', 'addr:street': 'Main St', 'addr:city': 'Suwanee' } })] });
-    expect(place).toEqual({ osmType: 'node', osmId: 42, key: 'osm:node/42', name: 'Pho Corner', coordinate: suwanee, amenity: 'restaurant', cuisine: 'vietnamese', address: '310 Main St', city: 'Suwanee' });
+    expect(place).toEqual({ osmType: 'node', osmId: 42, key: 'osm:node/42', name: 'Pho Corner', coordinate: suwanee, amenity: 'restaurant', cuisine: 'vietnamese', address: '310 Main St', city: 'Suwanee', brand: null, brandWikidata: null });
   });
 
   it('uses the centre of a way or relation', () => {
@@ -63,7 +64,7 @@ describe('osmIcon', () => {
 
 const osmPlace = (id: number, name: string, metresNorth: number) => normalizeOsm({ elements: [element({ id, lat: north(metresNorth).latitude, tags: { amenity: 'restaurant', name } })] })[0];
 const seeded = (name: string, metresNorth: number): MapRestaurant => ({
-  id: `seed-${name}`, source: 'catalog', osm: null, name, neighbourhood: 'Town', address: '1 Main St', category: 'pizza', icon: 'pizza',
+  id: `seed-${name}`, source: 'catalog', osm: null, name, brandKey: `name:${normalizedName(name)}`, neighbourhood: 'Town', address: '1 Main St', category: 'pizza', icon: 'pizza',
   theme: { primaryColor: '#000000', accentColor: '#ffffff', fontKey: 'bold', patternKey: 'none' } as MapRestaurant['theme'], coordinate: north(metresNorth), card: null,
 });
 
@@ -273,5 +274,34 @@ describe('offline snapshot', () => {
   it('fills the map around GSU and offers nothing where it does not reach', () => {
     expect(mergeNearby([], offlinePlaces(OFFLINE_SNAPSHOT.centre), discoveryArea(OFFLINE_SNAPSHOT.centre))).toHaveLength(40);
     expect(offlinePlaces(suwanee)).toEqual([]);
+  });
+});
+
+describe('chains', () => {
+  const branch = (id: number, tags: Record<string, string>, metresNorth: number) =>
+    normalizeOsm({ elements: [element({ id, lat: north(metresNorth).latitude, tags: { amenity: 'fast_food', ...tags } })] })[0];
+  const cfaCard = { id: 'card-cfa', stage: 'regular' } as MapRestaurant['card'];
+  const owned = { ...seeded("Chick-fil-A", 4900), card: cfaCard };
+
+  it('reads brand and brand:wikidata from the tags', () => {
+    expect(branch(1, { name: 'Chick-fil-A #12', brand: 'Chick-fil-A', 'brand:wikidata': 'Q491516' }, 100)).toMatchObject({ brand: 'Chick-fil-A', brandWikidata: 'Q491516' });
+  });
+
+  it('gives every location of an owned brand the same card, grouped by wikidata or by name', () => {
+    const merged = mergeNearby([owned], [
+      branch(1, { name: 'Chick-fil-A', brand: 'Chick-fil-A', 'brand:wikidata': 'Q491516' }, 300),
+      branch(2, { name: 'Chick Fil A Midtown', brand: 'Chick-fil-A' }, 600),
+      branch(3, { name: "Chick-fil-A" }, 900),
+      branch(4, { name: 'Wendys', brand: "Wendy's" }, 1200),
+    ], area);
+    const osm = merged.filter((pin) => pin.source === 'osm');
+    expect(osm.slice(0, 3).every((pin) => pin.card === cfaCard)).toBe(true);
+    expect(osm[3].card).toBeNull();
+    expect(osm.map((pin) => pin.brandKey)).toEqual(['wikidata:Q491516', 'name:chick fil a', 'name:chick fil a', 'name:wendy s']);
+  });
+
+  it('counts the locations of one brand as one restaurant', () => {
+    const merged = mergeNearby([owned], [branch(1, { name: 'Chick-fil-A' }, 300), branch(2, { name: 'Chick-fil-A' }, 700), branch(3, { name: "McDonald's" }, 800)], area);
+    expect(brandTotals(merged)).toEqual({ discovered: 1, total: 2 });
   });
 });

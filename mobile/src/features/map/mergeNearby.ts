@@ -1,15 +1,12 @@
 import { distanceKm, type Coordinate } from './coordinates';
 import { inDiscoveryArea, type DiscoveryArea } from './discoveryArea';
-import type { MapRestaurant } from './mapRestaurants';
+import { normalizedName, type MapRestaurant } from './mapRestaurants';
 import { osmIcon, type OsmPlace } from './osm';
 
 export const MAX_VISIBLE_RESTAURANTS = 40;
 const SAME_PLACE_METRES = 150;
 // OSM places have no theme of ours, so their preview uses neutral colours.
 const NEUTRAL_THEME = { primaryColor: '#4A4744', accentColor: '#B4B1AE', fontKey: 'friendly', patternKey: 'none' } as MapRestaurant['theme'];
-
-const normalizedName = (name: string) =>
-  name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/^the /, '');
 
 type Named = { name: string; coordinate: Coordinate };
 
@@ -18,19 +15,27 @@ export function sameRestaurant(a: Named, b: Named): boolean {
   return normalizedName(a.name) === normalizedName(b.name) && distanceKm(a.coordinate, b.coordinate) * 1000 <= SAME_PLACE_METRES;
 }
 
-function toPin(place: OsmPlace): MapRestaurant {
+const nameKey = (place: OsmPlace) => `name:${normalizedName(place.brand ?? place.name)}`;
+const brandKeyOf = (place: OsmPlace) => (place.brandWikidata ? `wikidata:${place.brandWikidata}` : nameKey(place));
+
+/** The pin for one location. A location of a chain the user owns shows that brand's card. */
+function toPin(place: OsmPlace, owned: Map<string, MapRestaurant>): MapRestaurant {
+  const brandKey = brandKeyOf(place);
+  const brandOwner = owned.get(brandKey) ?? owned.get(nameKey(place));
   return {
     id: place.key,
     source: 'osm',
     osm: { type: place.osmType, id: place.osmId },
     name: place.name,
+    brandKey,
     neighbourhood: place.city ?? '',
     address: place.address ?? '',
     category: place.cuisine ?? place.amenity,
     icon: osmIcon(place.cuisine, place.amenity),
-    theme: NEUTRAL_THEME,
+    // The brand's own look when it is collected, so every branch glows the same colour.
+    theme: brandOwner?.theme ?? NEUTRAL_THEME,
     coordinate: place.coordinate,
-    card: null,
+    card: brandOwner?.card ?? null,
   };
 }
 
@@ -50,5 +55,7 @@ export function mergeNearby(catalog: MapRestaurant[], places: OsmPlace[], area: 
     if (ours.some((restaurant) => sameRestaurant(restaurant, place)) || kept.some((other) => sameRestaurant(other, place))) continue;
     kept.push(place);
   }
-  return [...ours.slice(0, MAX_VISIBLE_RESTAURANTS), ...kept.map(toPin)];
+  // Collected brands from the whole catalog, not only those in range: the card is theirs wherever the branch is.
+  const owned = new Map(catalog.filter((restaurant) => restaurant.card).map((restaurant) => [restaurant.brandKey, restaurant]));
+  return [...ours.slice(0, MAX_VISIBLE_RESTAURANTS), ...kept.map((place) => toPin(place, owned))];
 }

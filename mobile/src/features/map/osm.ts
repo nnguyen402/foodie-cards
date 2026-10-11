@@ -16,6 +16,9 @@ export type OsmPlace = {
   cuisine: string | null;
   address: string | null;
   city: string | null;
+  /** OSM `brand` (or `operator`-less name) and `brand:wikidata`; absent in results saved before chains were grouped. */
+  brand?: string | null;
+  brandWikidata?: string | null;
 };
 
 // Kept small so the shared servers answer quickly. Overpass cannot sort by distance, so in a
@@ -53,6 +56,8 @@ export function normalizeOsm(response: unknown): OsmPlace[] {
       cuisine: text(tags.cuisine)?.split(';')[0].trim().toLowerCase() || null,
       address: street === '' ? null : street,
       city: text(tags['addr:city']),
+      brand: text(tags.brand),
+      brandWikidata: text(tags['brand:wikidata']),
     }];
   });
 }
