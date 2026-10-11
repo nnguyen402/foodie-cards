@@ -11,7 +11,7 @@ export function readableTextOn(hex: string): string {
   return luminance < 0.36 ? cardInk.light : cardInk.dark;
 }
 
-export type CuisineIconKind = 'coffee' | 'bbq' | 'southern' | 'burger' | 'pizza' | 'plate';
+export type CuisineIconKind = 'coffee' | 'bbq' | 'southern' | 'burger' | 'pizza' | 'sushi' | 'plate';
 
 // Fallback art when a restaurant has no prepared image. Busy Bee Café (soul_food) shows the coffee cup.
 const categoryIcons: Record<string, CuisineIconKind> = {
@@ -21,6 +21,8 @@ const categoryIcons: Record<string, CuisineIconKind> = {
   southern: 'southern',
   fast_food: 'burger',
   pizza: 'pizza',
+  sushi: 'sushi',
+  japanese: 'sushi',
 };
 
 export function cuisineIcon(category: string): CuisineIconKind {

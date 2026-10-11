@@ -5,6 +5,6 @@ export default function AuthLayout() {
   const { status } = useAuth();
   if (status === 'misconfigured') return <Redirect href="/" />;
   if (status === 'loading') return null;
-  if (status === 'signed-in' || status === 'profile-error') return <Redirect href="/(tabs)/collection" />;
+  if (status === 'signed-in' || status === 'profile-error') return <Redirect href="/(tabs)/map" />;
   return <Stack screenOptions={{ headerShown: false, animation: 'default' }} />;
 }

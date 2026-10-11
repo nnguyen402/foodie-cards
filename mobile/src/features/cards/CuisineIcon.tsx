@@ -41,6 +41,17 @@ const icons: Record<Exclude<CuisineIconKind, 'pizza'>, (u: number) => Part[]> = 
     { x: 14, y: 62, w: 72, h: 11, r: 5 },
     { x: 14, y: 78, w: 72, h: 12, r: 3, borderBottomLeftRadius: 10 * u, borderBottomRightRadius: 10 * u },
   ],
+  // Two maki rolls side by side, seen from above, with chopsticks across the top.
+  sushi: (u) => [
+    { x: 8, y: 14, w: 84, h: 5, r: 3, transform: [{ rotate: '-6deg' }] },
+    { x: 8, y: 26, w: 84, h: 5, r: 3, transform: [{ rotate: '-6deg' }] },
+    { x: 8, y: 44, w: 40, h: 40, r: 20 },
+    { x: 18, y: 54, w: 20, h: 20, r: 10, fill: 'cutout' },
+    { x: 24, y: 60, w: 8, h: 8, r: 4 },
+    { x: 52, y: 44, w: 40, h: 40, r: 20 },
+    { x: 62, y: 54, w: 20, h: 20, r: 10, fill: 'cutout' },
+    { x: 68, y: 60, w: 8, h: 8, r: 4 },
+  ],
   plate: (u) => [
     { x: 24, y: 24, w: 52, h: 52, r: 26, backgroundColor: 'transparent', borderWidth: 6 * u },
     { x: 38, y: 38, w: 24, h: 24, r: 12 },
