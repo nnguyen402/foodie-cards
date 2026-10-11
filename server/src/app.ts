@@ -16,6 +16,8 @@ import {
 } from '@foodie-cards/shared';
 import type { ServerDependencies } from './auth.js';
 import { canonicalizeReceiptItems, ReceiptItemResolutionError, safeConfirmedReceiptSchema, uuidSchema } from './receipts/submit.js';
+import { createReceiptRouter } from './receipts/routes.js';
+import type { ReceiptDependencies } from './receipts/store.js';
 
 export type { ServerDependencies } from './auth.js';
 
@@ -53,7 +55,10 @@ function requireService<T extends keyof ServerDependencies>(dependencies: Server
   return dependencies[key] as NonNullable<ServerDependencies[T]> | undefined;
 }
 
-export function createApp(dependencies: ServerDependencies | undefined = undefined): Express {
+export function createApp(
+  dependencies: ServerDependencies | undefined = undefined,
+  receiptDependencies: ReceiptDependencies | undefined = undefined,
+): Express {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '32kb' }));
@@ -229,6 +234,8 @@ export function createApp(dependencies: ServerDependencies | undefined = undefin
       return sendServiceError(res, error);
     }
   });
+
+  app.use('/api/receipts', createReceiptRouter(requireVerifiedUser, receiptDependencies));
 
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const status = error && typeof error === 'object' && 'status' in error && typeof error.status === 'number' ? error.status : 500;
