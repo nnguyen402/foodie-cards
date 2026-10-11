@@ -20,7 +20,7 @@ export type VintageColor = keyof typeof vintage;
 /** The only spacing steps these screens use. */
 export const vintageSpace = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
-export const vintageRadius = { control: 12, banner: 14, card: 16 } as const;
+export const vintageRadius = { control: 12, banner: 16, card: 16, /** Scan upload card. */ sheet: 24, /** Buttons on the Scan upload card. */ button: 16 } as const;
 
 /** `#RRGGBB` plus an opacity from 0 to 1 → `rgba(...)`. */
 export function withAlpha(hex: string, alpha: number): string {

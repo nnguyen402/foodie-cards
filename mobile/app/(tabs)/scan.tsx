@@ -192,7 +192,7 @@ function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
   // The print fits the card's inner width and at most ~45% of the screen height; the mat hugs it.
   const printBox = framedPrintSize(
     photoSize && photoSize.uri === previewUri ? photoSize : null,
-    screen.width - vintageSpace.xl * 4 - (PRINT_MAT + 1) * 2,
+    screen.width - vintageSpace.xl * 2 - vintageSpace.xxl * 2 - (PRINT_MAT + 1) * 2,
     screen.height * 0.45 - (PRINT_MAT + 1) * 2,
   );
   const signedIn = status === 'signed-in' && !!session;
@@ -207,7 +207,7 @@ function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
       keyboardShouldPersistTaps="handled"
     >
       {unlockTarget && !bannerHidden ? <UnlockBanner target={unlockTarget} onDismiss={() => setBannerHidden(true)} /> : null}
-      {error ? <MessagePanel title="Receipt not ready" body={error} kind="error" {...kit.notice('error')} /> : null}
+      {error ? <MessagePanel title="Receipt not ready" body={error} kind="error" {...kit.notice('error')} style={[kit.notice('error').style, styles.noticeRadius]} /> : null}
       {!signedIn ? (
         <MessagePanel title="Sign in to continue" body="A receipt draft is private to your account. Sign in before adding one." {...kit.notice('plain')} />
       ) : (
@@ -242,20 +242,20 @@ function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
           ) : (
             <>
               <View style={styles.cameraRing}>
-                <View style={styles.cameraCircle}><Ionicons name="camera" size={28} color={vintage.cream} /></View>
+                <View style={styles.cameraCircle}><Ionicons name="camera" size={32} color={vintage.cream} /></View>
               </View>
               <Text allowFontScaling accessibilityRole="header" style={[styles.cardTitle, kit.font('display')]}>Photograph or upload your receipt</Text>
               <Text allowFontScaling style={[styles.helper, kit.font('body')]}>We’ll prepare a private editable draft. Nothing is added to your collection until you confirm it.</Text>
             </>
           )}
           <View style={styles.actions}>
-            {preparedImage ? null : <Button label="Take a photo" onPress={() => void chooseImage('camera')} loading={busy} testID="capture-receipt" {...kit.primaryButton} leftIcon={<Ionicons name="camera-outline" size={20} color={vintage.cream} />} />}
+            {preparedImage ? null : <Button label="Take a photo" onPress={() => void chooseImage('camera')} loading={busy} testID="capture-receipt" {...kit.primaryButton} style={[kit.primaryButton.style, styles.cardButton]} leftIcon={<Ionicons name="camera-outline" size={20} color={vintage.cream} />} />}
             {error && preparedImage && !busy ? <Button label="Retry upload" onPress={() => {
               const current = flow.current.snapshot();
               const operation = ++operationId.current;
               void uploadImage(preparedImage, operation, current);
-            }} testID="retry-receipt-upload" {...kit.primaryButton} /> : null}
-            <Button label={cameraDenied ? 'Choose from library' : 'Upload from library'} variant="secondary" onPress={() => void chooseImage('library')} loading={busy} testID="choose-receipt" {...kit.outlineButton} leftIcon={<Ionicons name="images-outline" size={20} color={vintage.cream} />} />
+            }} testID="retry-receipt-upload" {...kit.primaryButton} style={[kit.primaryButton.style, styles.cardButton]} /> : null}
+            <Button label={cameraDenied ? 'Choose from library' : 'Upload from library'} variant="secondary" onPress={() => void chooseImage('library')} loading={busy} testID="choose-receipt" {...kit.outlineButton} style={[kit.outlineButton.style, styles.cardButton]} leftIcon={<Ionicons name="images-outline" size={20} color={vintage.cream} />} />
             {busy ? <Text allowFontScaling accessibilityLiveRegion="polite" style={[styles.status, kit.font('body')]}>Preparing and securely reading the receipt…</Text> : null}
             {busy ? <Button label="Cancel" variant="quiet" onPress={cancelUpload} testID="cancel-receipt-upload" {...kit.quietButton} /> : null}
           </View>
@@ -268,13 +268,25 @@ function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
 const PRINT_MAT = 10;
 
 const styles = StyleSheet.create({
-  card: { ...vintageCard, padding: vintageSpace.xl, alignItems: 'center' },
-  dashed: { position: 'absolute', top: vintageSpace.sm, left: vintageSpace.sm, right: vintageSpace.sm, bottom: vintageSpace.sm, borderWidth: 1, borderStyle: 'dashed', borderColor: withAlpha(vintage.gold, 0.7), borderRadius: vintageRadius.card - vintageSpace.sm / 2 },
-  cameraRing: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: vintage.gold, padding: 3, marginTop: vintageSpace.sm },
-  cameraCircle: { flex: 1, borderRadius: 29, backgroundColor: vintage.rust, alignItems: 'center', justifyContent: 'center' },
+  card: {
+    ...vintageCard,
+    padding: vintageSpace.xxl,
+    borderRadius: vintageRadius.sheet,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  noticeRadius: { borderRadius: vintageRadius.sheet },
+  cardButton: { borderRadius: vintageRadius.button },
+  dashed: { position: 'absolute', top: vintageSpace.sm, left: vintageSpace.sm, right: vintageSpace.sm, bottom: vintageSpace.sm, borderWidth: 1, borderStyle: 'dashed', borderColor: withAlpha(vintage.gold, 0.7), borderRadius: vintageRadius.button },
+  cameraRing: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: vintage.gold, padding: 4 },
+  cameraCircle: { flex: 1, borderRadius: 32, backgroundColor: vintage.rust, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { color: vintage.cream, fontSize: 20, lineHeight: 26, textAlign: 'center' },
   helper: { color: vintageText.muted, fontSize: 14, lineHeight: 20, textAlign: 'center', maxWidth: 300 },
-  actions: { alignSelf: 'stretch', gap: vintageSpace.md, marginTop: vintageSpace.sm },
+  actions: { alignSelf: 'stretch', gap: vintageSpace.md, marginTop: vintageSpace.lg },
   status: { color: vintageText.muted, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   printRow: { alignSelf: 'stretch', alignItems: 'center' },
   print: {

@@ -10,9 +10,10 @@ import { useVintageFonts } from '@/theme/use-vintage-fonts';
 
 const HERO = require('../../../assets/design/scan-hero.jpg');
 const TRANSPARENT_RED = withAlpha(vintage.deepRed, 0);
-const SHADE = withAlpha(vintage.ink, 0.72);
+const SHADE = withAlpha(vintage.ink, 0.5);
+const SHADE_MID = withAlpha(vintage.ink, 0.22);
 const SHADE_CLEAR = withAlpha(vintage.ink, 0);
-const VIGNETTE = withAlpha('#000000', 0.45);
+const VIGNETTE = withAlpha('#000000', 0.3);
 const VIGNETTE_CLEAR = withAlpha('#000000', 0);
 /** Room kept free at the top right for the settings gear. */
 const GEAR_CLEARANCE = 64;
@@ -23,8 +24,8 @@ export function VintageHero({ height }: { height: number }) {
       <Image source={HERO} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
       {/* Soft vignette on the left and right edges. */}
       <LinearGradient colors={[VIGNETTE, VIGNETTE_CLEAR, VIGNETTE_CLEAR, VIGNETTE]} locations={[0, 0.22, 0.78, 1]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} />
-      {/* Dark shade behind the title, top left, for contrast. */}
-      <LinearGradient colors={[SHADE, SHADE_CLEAR]} start={{ x: 0, y: 0 }} end={{ x: 0.9, y: 0.8 }} style={StyleSheet.absoluteFill} />
+      {/* Soft, edgeless shade under the title for contrast: strongest top left, gone well before the art's far side. */}
+      <LinearGradient colors={[SHADE, SHADE_MID, SHADE_CLEAR]} locations={[0, 0.45, 1]} start={{ x: 0, y: 0.15 }} end={{ x: 0.85, y: 0.65 }} style={StyleSheet.absoluteFill} />
       {/* Fade into the red ground. */}
       <LinearGradient colors={[TRANSPARENT_RED, withAlpha(vintage.deepRed, 0.75), vintage.deepRed]} locations={[0.35, 0.75, 1]} style={StyleSheet.absoluteFill} />
     </View>
