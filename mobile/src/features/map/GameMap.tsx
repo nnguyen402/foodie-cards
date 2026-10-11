@@ -18,6 +18,7 @@ import { PIN_CENTRE_OFFSET, PIN_POP_MS, RestaurantPin } from './RestaurantPin';
 import { RestaurantSheet } from './RestaurantSheet';
 import { areaKey, useMapRestaurants } from './useMapRestaurants';
 import { placeNameOf, useUserLocation } from './useUserLocation';
+import { unlockParams } from './unlockTarget';
 import type { Coordinate } from './coordinates';
 
 // The camera looks straight down from high above, then drops to frame the discovery circle.
@@ -260,7 +261,7 @@ export function GameMap() {
           onClose={() => setSelectedId(null)}
           onScan={() => {
             setSelectedId(null);
-            router.push('/scan');
+            router.push({ pathname: '/scan', params: unlockParams(selected) });
           }}
           onViewCard={(cardId) => {
             setSelectedId(null);
@@ -275,7 +276,7 @@ export function GameMap() {
           onScan={() => {
             setCardOpen(false);
             setSelectedId(null);
-            router.push('/scan');
+            router.push({ pathname: '/scan', params: unlockParams(selected) });
           }}
           onViewCard={(cardId) => {
             setCardOpen(false);

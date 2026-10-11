@@ -2,6 +2,7 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 import { Text } from '@/components/ui/reusables/text';
+import { Button } from '@/components/ui/button';
 import { CuisineArt } from '../cards/CuisineArtView';
 import { cuisineColors } from '../cards/cuisineArt';
 import { stageLabel } from '../cards/stageStyles';
@@ -67,17 +68,15 @@ export function RestaurantSheet({ restaurant, distance, onOpenCard, onScan, onVi
         </Pressable>
       </View>
       {availability === 'unavailable' ? (
-        <Text className="text-sm font-medium" style={{ color: INK }}>Nearby listing only — no card is available for this restaurant.</Text>
+        <Text className="text-sm font-medium" style={{ color: INK }}>Nearby listing only — a card can’t be created for it from a receipt yet.</Text>
+      ) : null}
+      {card ? (
+        <View className="gap-2">
+          <Button label="Log another visit" onPress={onScan} accessibilityLabel={`Log another visit to ${restaurant.name}`} />
+          <Button label="View card" variant="secondary" onPress={() => onViewCard(card.id)} accessibilityLabel={`View your ${restaurant.name} card`} />
+        </View>
       ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={card ? `View your ${restaurant.name} card` : `Scan a receipt from ${restaurant.name} to unlock its card`}
-          onPress={() => (card ? onViewCard(card.id) : onScan())}
-          className="min-h-14 items-center justify-center rounded-2xl px-4 active:opacity-80"
-          style={{ backgroundColor: GOLD }}
-        >
-          <Text className="text-base font-extrabold" style={{ color: '#1b130b' }}>{card ? 'View card' : 'Scan receipt'}</Text>
-        </Pressable>
+        <Button label="Scan receipt to unlock" onPress={onScan} accessibilityLabel={`Scan a receipt from ${restaurant.name} to unlock its card`} />
       )}
     </Animated.View>
   );
