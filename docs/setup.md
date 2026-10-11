@@ -58,7 +58,7 @@ The signed-in scan screen accepts a camera photo or photo-library image, convert
 
 Apply `20261011000100_receipt_draft_fields.sql` before using this flow. It allows unreadable fields to stay empty while a receipt is a draft and requires complete fields once it leaves draft status. This change is delivered as a migration; testing the branch does not deploy it to a hosted project.
 
-Gemini requests allow 30 seconds per attempt and one retry. Gemini 3 Flash uses low thinking by default to keep receipt extraction within that budget. The confirmation screen submits to Lane A's `/api/receipts/submit`; that endpoint must be integrated before receipt acceptance and rewards can complete. A missing endpoint produces a visible error and preserves edits for retry.
+Gemini requests allow 30 seconds per attempt and one retry. Gemini 3 Flash uses low thinking by default to keep receipt extraction within that budget. The confirmation screen submits to the integrated `/api/receipts/submit` endpoint and offers a card reveal when acceptance awards a stage. Retryable failures preserve edits. JSON confirmation requests are bounded to 512 KiB, separate from the 10 MiB multipart image limit.
 
 Receipt extraction was tested with three supplied photos using the configured Gemini model. Physical-phone QA is still required for camera permission, library selection, image conversion, upload over the phone's network, account switching, and confirmation with Lane A integrated.
 

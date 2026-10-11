@@ -18,6 +18,8 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="ui-preview" options={{ headerShown: true, title: 'Shared controls' }} />
+        <Stack.Screen name="card/[id]" options={{ headerShown: true, title: '', headerBackTitle: 'Collection' }} />
+        <Stack.Screen name="reveal/[eventId]" options={{ presentation: 'fullScreenModal', gestureEnabled: false, animation: 'fade' }} />
       </Stack>
       <PortalHost />
     </View>

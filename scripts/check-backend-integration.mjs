@@ -1,11 +1,12 @@
 // Synthetic end-to-end backend check against local Supabase only.
 // Run: node --import tsx scripts/check-backend-integration.mjs
 import { execFileSync } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { createClient } from '@supabase/supabase-js';
 import { createApp } from '../server/src/app.ts';
 import { createSupabaseDependencies } from '../server/src/auth.ts';
+import { createReceiptDependencies } from '../server/src/receipts/store.ts';
 
 let local;
 try {
@@ -19,7 +20,15 @@ try {
 assert.match(local.API_URL, /^http:\/\/(127\.0\.0\.1|localhost):54321$/);
 const admin = createClient(local.API_URL, local.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 const dependencies = createSupabaseDependencies({ SUPABASE_URL: local.API_URL, SUPABASE_SERVICE_ROLE_KEY: local.SERVICE_ROLE_KEY });
-const server = createApp(dependencies).listen(0, '127.0.0.1');
+const receipts = createReceiptDependencies({ SUPABASE_URL: local.API_URL, SUPABASE_SERVICE_ROLE_KEY: local.SERVICE_ROLE_KEY });
+// Only AI recognition is synthetic; upload, ownership, storage and acceptance use real local services.
+receipts.extractImage = async () => ({
+  draftId: randomUUID(), restaurantId: null, restaurantName: null, receiptDate: null,
+  receiptNumber: null, totalMinor: null, currency: null,
+  items: [{ originalText: 'TEST CHICKEN', suggestedName: 'honey chicken', quantity: 1 }],
+  warnings: ['SYNTHETIC TEST; NOT A REAL RECEIPT'],
+});
+const server = createApp(dependencies, receipts).listen(0, '127.0.0.1');
 await new Promise((resolve) => server.once('listening', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
 const users = [];
@@ -51,18 +60,19 @@ try {
   const owner = await account();
   const other = await account();
   assert.equal((await api('/api/me', 'forged-token')).status, 401, 'Real Auth must reject a forged bearer token');
-  const receiptId = randomUUID();
-  const image = Buffer.from(`SYNTHETIC LOCAL TEST BYTES ${randomUUID()}`);
-  const imagePath = `${owner.userId}/${receiptId}.png`;
-  const upload = await admin.storage.from('receipts').upload(imagePath, image, { contentType: 'image/png' });
-  assert.equal(upload.error, null, 'Local private test upload failed');
-  images.push(imagePath);
-  const stored = await admin.from('receipts').insert({
-    id: receiptId, user_id: owner.userId, image_path: imagePath,
-    image_hash: createHash('sha256').update(image).digest('hex'),
-    extraction_draft: { warnings: ['SYNTHETIC TEST; NOT A REAL RECEIPT'] },
+  const image = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.from(`SYNTHETIC LOCAL TEST BYTES ${randomUUID()}`)]);
+  const form = new FormData();
+  form.append('image', new Blob([image], { type: 'image/png' }), 'synthetic.png');
+  const upload = await fetch(base + '/api/receipts/extract', {
+    method: 'POST', headers: { Authorization: `Bearer ${owner.token}` }, body: form,
   });
-  assert.equal(stored.error, null, 'Unresolved owned draft persistence failed');
+  const extracted = await upload.json();
+  assert.equal(upload.status, 200, 'Real private draft upload failed: ' + JSON.stringify(extracted));
+  const receiptId = extracted.draftId;
+  images.push(`${owner.userId}/${receiptId}.png`);
+  assert.deepEqual((await api(`/api/receipts/drafts/${receiptId}`, owner.token)).body, extracted);
+  assert.equal((await api(`/api/receipts/drafts/${receiptId}`, other.token)).status, 404);
+  console.log('PASS: real multipart upload, private storage and owned unresolved draft reload (synthetic AI)');
   const confirmation = { draftId: receiptId, submissionId: randomUUID(), restaurantId,
     receiptDate: '2026-10-10', receiptNumber: randomUUID(), totalMinor: 1000, currency: 'USD',
     items: [{ originalText: 'TEST CHICKEN', confirmedName: 'honey chicken', quantity: 1 }] };
