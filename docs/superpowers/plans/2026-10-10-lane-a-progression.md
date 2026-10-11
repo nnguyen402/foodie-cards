@@ -56,6 +56,6 @@
 - [x] Review combined changes independently for spec compliance/security and resolve findings.
 - [x] Run fresh tests/build/SQL checks and inspect the complete diff; record verification and remaining phone/deployment gates.
 - [x] Document B+C draft persistence requirements and submission/reveal calls; D transactional review interface and ownership boundaries.
-- [x] Commit the reviewable checkpoint. Hosted rollout remains a separate step after local verification and review, preserving migration history. Record actual status accurately.
+- [x] Commit the reviewable checkpoint and push the A branch. Apply the reviewed migrations atomically to the authorized hosted project, preserving exact history. Record actual status accurately.
 
 Public backend deployment and physical iPhone verification require the corresponding environment/device access; complete all locally available backend work first and identify the concrete remaining gate.

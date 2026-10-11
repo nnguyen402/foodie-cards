@@ -2,6 +2,8 @@
 
 Implementation branch: `feat/lane-a-progression`. This document describes the integration boundary; consult the checkpoint for verified deployment status. The project owner is A, one teammate owns B+C, and another owns D.
 
+Backend checkpoint `f78513f` is pushed on that branch; `main` is unchanged by this work. Both A migrations are applied locally and to the configured hosted Supabase project. Local verification passed 57 JavaScript tests, 159 SQL checks, five concurrency checks, build/typecheck, and real Auth/PostgREST/HTTP integration. B+C and D can use these backend interfaces from A's branch now; merge through a PR later.
+
 ## B+C: receipt to card
 
 Keep capture, upload, extraction, normalization UI, collection/detail, and reveals in your lane. A owns `server/src/receipts/submit.ts`, shared contracts, migrations, acceptance and rewards. Coordinate route registration in `server/src/app.ts` through A.
