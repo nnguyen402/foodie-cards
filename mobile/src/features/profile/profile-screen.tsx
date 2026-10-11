@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BrandHeader } from '@/components/brand-header';
 import { AppText } from '@/components/ui/app-text';
@@ -82,7 +82,7 @@ export function ProfileScreen() {
         <>
           <StatisticsSection statistics={boardState.board.statistics} />
           <PinSection pins={boardState.board.pins} />
-          <ReviewsSection reviews={boardState.board.reviews} />
+          <ReviewsSection reviews={boardState.board.reviews} onOpen={(cardId) => router.push(`/card/${cardId}`)} />
           <AwardSection title="Badges" empty="Badges appear here after you earn them." awards={boardState.board.badges} />
           <AwardSection
             title="Titles"
@@ -144,7 +144,7 @@ function pinLabel(pin: ProfilePinSlot): string {
   return `Pin slot ${pin.slot}, ${pin.restaurantName ?? 'restaurant'}${pin.stageLabel ? `, ${pin.stageLabel}` : ''}`;
 }
 
-function ReviewsSection({ reviews }: { reviews: ProfileReview[] }) {
+function ReviewsSection({ reviews, onOpen }: { reviews: ProfileReview[]; onOpen: (cardId: string) => void }) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeading}>
@@ -159,7 +159,13 @@ function ReviewsSection({ reviews }: { reviews: ProfileReview[] }) {
       ) : (
         <View style={styles.reviewList}>
           {reviews.map((review) => (
-            <View key={review.restaurantId} style={styles.reviewCard}>
+            <Pressable
+              key={review.restaurantId}
+              accessibilityRole="button"
+              accessibilityHint="Opens this restaurant's card to edit your review"
+              onPress={() => onOpen(review.cardId)}
+              style={({ pressed }) => [styles.reviewCard, pressed ? styles.pressed : undefined]}
+            >
               <View style={styles.reviewHeading}>
                 <AppText strong style={styles.reviewRestaurant}>{review.restaurantName}</AppText>
                 <View style={styles.ratingPill}>
@@ -174,7 +180,7 @@ function ReviewsSection({ reviews }: { reviews: ProfileReview[] }) {
                 <AppText variant="small" muted>Rating only</AppText>
               )}
               <AppText variant="caption" muted>Updated {formatReviewDate(review.updatedAt)}</AppText>
-            </View>
+            </Pressable>
           ))}
         </View>
       )}
@@ -239,6 +245,7 @@ const styles = StyleSheet.create({
   emptyReviews: { padding: spacing.lg, gap: spacing.xs, borderRadius: radius.control, backgroundColor: colors.surfaceMuted },
   reviewList: { gap: spacing.sm },
   reviewCard: { padding: spacing.lg, gap: spacing.sm, borderRadius: radius.control, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  pressed: { opacity: 0.7 },
   reviewHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   reviewRestaurant: { flex: 1 },
   ratingPill: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.pill, backgroundColor: colors.accentSoft },
