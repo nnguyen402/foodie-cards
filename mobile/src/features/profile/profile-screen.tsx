@@ -53,6 +53,7 @@ export function ProfileScreen() {
           </View>
         </View>
         <Button label="Edit profile" variant="secondary" onPress={() => router.push('/profile/edit')} />
+        <Button label="Manage title and pins" variant="secondary" onPress={() => router.push('/profile/customize')} />
       </View>
 
       <View style={styles.levelCard}>

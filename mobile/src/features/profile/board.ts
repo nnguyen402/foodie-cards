@@ -22,6 +22,7 @@ export type ProfileAward = { key: string; name: string; description: string };
 
 export type ProfileBoard = {
   pins: ProfilePinSlot[];
+  ownedCards: OwnedCardRow[];
   badges: ProfileAward[];
   titles: ProfileAward[];
   equippedTitleName: string | null;
@@ -74,6 +75,9 @@ export function buildProfileBoard(input: {
 
   return {
     pins,
+    ownedCards: [...input.cards].sort((a, b) =>
+      (a.restaurantName ?? '').localeCompare(b.restaurantName ?? ''),
+    ),
     badges: input.badgeKeys.map((key) => catalogName(key, input.badges)),
     titles: input.titleKeys.map((key) => catalogName(key, input.titles)),
     equippedTitleName: input.equippedTitleKey ? catalogName(input.equippedTitleKey, input.titles).name : null,
