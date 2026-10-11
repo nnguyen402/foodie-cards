@@ -21,6 +21,18 @@ export type CardRow = {
   } | null;
 };
 
+export function toCatalogRestaurant(row: NonNullable<CardRow['restaurants']>): CardView['restaurant'] {
+  return {
+    id: row.id,
+    name: row.name,
+    locationLabel: row.location_label,
+    category: row.category,
+    theme: resolveRestaurantTheme(row.category, (row.theme ?? {}) as Partial<RestaurantTheme>),
+    heroImagePath: row.hero_image_path,
+    heroImageKind: row.hero_image_kind,
+  };
+}
+
 export function toCardView(row: CardRow, rating: number | null): CardView | null {
   const stage = restaurantStageSchema.safeParse(row.stage);
   const restaurant = row.restaurants;
@@ -32,14 +44,6 @@ export function toCardView(row: CardRow, rating: number | null): CardView | null
     visitCount: row.visit_count,
     lastVisitDate: row.last_visit_date,
     rating,
-    restaurant: {
-      id: restaurant.id,
-      name: restaurant.name,
-      locationLabel: restaurant.location_label,
-      category: restaurant.category,
-      theme: resolveRestaurantTheme(restaurant.category, (restaurant.theme ?? {}) as Partial<RestaurantTheme>),
-      heroImagePath: restaurant.hero_image_path,
-      heroImageKind: restaurant.hero_image_kind,
-    },
+    restaurant: toCatalogRestaurant(restaurant),
   };
 }
