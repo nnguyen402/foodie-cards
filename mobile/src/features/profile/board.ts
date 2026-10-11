@@ -1,4 +1,5 @@
 import { restaurantStageSchema, type RestaurantStage } from '@foodie-cards/shared';
+import type { ProfileReview, ProfileStatistics } from './activity';
 
 export type CatalogEntry = { key: string; name: string; description: string };
 
@@ -23,6 +24,8 @@ export type ProfileAward = { key: string; name: string; description: string };
 export type ProfileBoard = {
   pins: ProfilePinSlot[];
   ownedCards: OwnedCardRow[];
+  statistics: ProfileStatistics;
+  reviews: ProfileReview[];
   badges: ProfileAward[];
   titles: ProfileAward[];
   equippedTitleName: string | null;
@@ -52,6 +55,8 @@ export function buildProfileBoard(input: {
   badges: readonly CatalogEntry[];
   titles: readonly CatalogEntry[];
   equippedTitleKey: string | null;
+  statistics?: ProfileStatistics;
+  reviews?: readonly ProfileReview[];
 }): ProfileBoard {
   const cards = new Map(input.cards.map((card) => [card.id, card]));
   const pins: ProfilePinSlot[] = [1, 2, 3].map((slot) => {
@@ -78,6 +83,12 @@ export function buildProfileBoard(input: {
     ownedCards: [...input.cards].sort((a, b) =>
       (a.restaurantName ?? '').localeCompare(b.restaurantName ?? ''),
     ),
+    statistics: input.statistics ?? {
+      restaurantCount: input.cards.length,
+      verifiedVisitCount: 0,
+      distinctDishCount: 0,
+    },
+    reviews: [...(input.reviews ?? [])],
     badges: input.badgeKeys.map((key) => catalogName(key, input.badges)),
     titles: input.titleKeys.map((key) => catalogName(key, input.titles)),
     equippedTitleName: input.equippedTitleKey ? catalogName(input.equippedTitleKey, input.titles).name : null,

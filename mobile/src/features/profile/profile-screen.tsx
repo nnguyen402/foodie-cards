@@ -7,6 +7,7 @@ import { MessagePanel } from '@/components/ui/message-panel';
 import { useAuth } from '@/providers/auth-provider';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { avatarLabels } from './avatars';
+import type { ProfileReview, ProfileStatistics } from './activity';
 import type { ProfileAward, ProfilePinSlot } from './board';
 import { levelProgress } from './progress';
 import { useProfileBoard } from './use-profile-board';
@@ -79,7 +80,9 @@ export function ProfileScreen() {
       ) : null}
       {boardState.status === 'ready' ? (
         <>
+          <StatisticsSection statistics={boardState.board.statistics} />
           <PinSection pins={boardState.board.pins} />
+          <ReviewsSection reviews={boardState.board.reviews} />
           <AwardSection title="Badges" empty="Badges appear here after you earn them." awards={boardState.board.badges} />
           <AwardSection
             title="Titles"
@@ -92,6 +95,27 @@ export function ProfileScreen() {
 
       <Button label="Sign out" variant="secondary" onPress={() => void signOut()} loading={busy} />
     </ScrollView>
+  );
+}
+
+function StatisticsSection({ statistics }: { statistics: ProfileStatistics }) {
+  const items = [
+    { label: 'Restaurants collected', value: statistics.restaurantCount },
+    { label: 'Verified visits', value: statistics.verifiedVisitCount },
+    { label: 'Dishes tried', value: statistics.distinctDishCount },
+  ];
+  return (
+    <View style={styles.section}>
+      <AppText variant="heading" strong>Your journal</AppText>
+      <View style={styles.statRow}>
+        {items.map((item) => (
+          <View key={item.label} style={styles.statCard} accessibilityLabel={`${item.label}: ${item.value}`}>
+            <AppText variant="title" strong style={styles.statValue}>{item.value}</AppText>
+            <AppText variant="caption" muted>{item.label}</AppText>
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -118,6 +142,50 @@ function pinLabel(pin: ProfilePinSlot): string {
   if (pin.unavailable) return `Pin slot ${pin.slot}, card unavailable`;
   if (!pin.cardId) return `Pin slot ${pin.slot}, empty`;
   return `Pin slot ${pin.slot}, ${pin.restaurantName ?? 'restaurant'}${pin.stageLabel ? `, ${pin.stageLabel}` : ''}`;
+}
+
+function ReviewsSection({ reviews }: { reviews: ProfileReview[] }) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeading}>
+        <AppText variant="heading" strong>My Reviews</AppText>
+        <AppText variant="small" muted>{reviews.length}</AppText>
+      </View>
+      {reviews.length === 0 ? (
+        <View style={styles.emptyReviews}>
+          <AppText strong>No ratings or reviews yet</AppText>
+          <AppText variant="small" muted>Your restaurant ratings and written notes will appear here.</AppText>
+        </View>
+      ) : (
+        <View style={styles.reviewList}>
+          {reviews.map((review) => (
+            <View key={review.restaurantId} style={styles.reviewCard}>
+              <View style={styles.reviewHeading}>
+                <AppText strong style={styles.reviewRestaurant}>{review.restaurantName}</AppText>
+                <View style={styles.ratingPill}>
+                  <AppText variant="caption" strong style={review.rating === null ? styles.unratedText : styles.ratingText}>
+                    {review.rating === null ? 'Unrated' : `${review.rating.toFixed(1)} / 5`}
+                  </AppText>
+                </View>
+              </View>
+              {review.text.trim() ? (
+                <AppText selectable>{review.text}</AppText>
+              ) : (
+                <AppText variant="small" muted>Rating only</AppText>
+              )}
+              <AppText variant="caption" muted>Updated {formatReviewDate(review.updatedAt)}</AppText>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function formatReviewDate(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function AwardSection({ title, empty, awards, equippedKey }: { title: string; empty: string; awards: ProfileAward[]; equippedKey?: string | null }) {
@@ -162,9 +230,20 @@ const styles = StyleSheet.create({
   fill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.accent },
   section: { gap: spacing.md },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  statRow: { flexDirection: 'row', gap: spacing.sm },
+  statCard: { flex: 1, minHeight: 112, padding: spacing.md, gap: spacing.xs, justifyContent: 'center', borderRadius: radius.control, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  statValue: { color: colors.accent },
   pinRow: { flexDirection: 'row', gap: spacing.sm },
   pinSlot: { flex: 1, minHeight: 132, padding: spacing.md, gap: spacing.xs, borderRadius: radius.control, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, backgroundColor: colors.surfaceMuted },
   pinFilled: { borderStyle: 'solid', backgroundColor: colors.surface, borderColor: colors.border },
+  emptyReviews: { padding: spacing.lg, gap: spacing.xs, borderRadius: radius.control, backgroundColor: colors.surfaceMuted },
+  reviewList: { gap: spacing.sm },
+  reviewCard: { padding: spacing.lg, gap: spacing.sm, borderRadius: radius.control, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  reviewHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  reviewRestaurant: { flex: 1 },
+  ratingPill: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.pill, backgroundColor: colors.accentSoft },
+  ratingText: { color: colors.accent },
+  unratedText: { color: colors.inkMuted },
   awardList: { gap: spacing.sm },
   award: { padding: spacing.lg, gap: spacing.xs, borderRadius: radius.control, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   awardHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
