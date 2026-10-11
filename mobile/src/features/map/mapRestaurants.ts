@@ -3,7 +3,10 @@ import type { CardView } from '../cards/types';
 import { coordinateFor, type Coordinate } from './coordinates';
 
 export type MapRestaurant = {
+  /** One of our restaurant ids, or `osm:<type>/<id>` for a place we only know from OpenStreetMap. */
   id: string;
+  source: 'catalog' | 'osm';
+  osm: { type: 'node' | 'way' | 'relation'; id: number } | null;
   name: string;
   neighbourhood: string;
   address: string;
@@ -21,7 +24,7 @@ function toPin(place: Place, card: MapRestaurant['card']): MapRestaurant | null 
   const coordinate = coordinateFor(place);
   if (!coordinate) return null;
   const [neighbourhood, address = ''] = place.locationLabel.split(' · ');
-  return { id: place.id, name: place.name, neighbourhood, address, category: place.category, icon: cuisineIcon(place.category), theme: place.theme, coordinate, card };
+  return { id: place.id, source: 'catalog', osm: null, name: place.name, neighbourhood, address, category: place.category, icon: cuisineIcon(place.category), theme: place.theme, coordinate, card };
 }
 
 /** Every restaurant we can place on the map, collected or not, in name order. */

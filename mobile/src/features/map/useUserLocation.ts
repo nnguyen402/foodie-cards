@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as Location from 'expo-location';
 import type { Coordinate } from './coordinates';
 
-export type UserLocation = {
+export type UserLocation = UserPosition & {
+  /** Reads the position again on request. Resolves to null when location is not available. */
+  refresh: () => Promise<Coordinate | null>;
+};
+
+type UserPosition = {
   status: 'pending' | 'granted' | 'denied';
   coordinate: Coordinate | null;
   /** "Atlanta, GA" from the device's own geocoder, when it can name the place. */
@@ -21,7 +26,7 @@ async function nameOf(coordinate: Coordinate): Promise<string | null> {
 
 // Asks once for while-in-use location. A refusal or a failed fix is not an error: the map falls back to downtown.
 export function useUserLocation(): UserLocation {
-  const [location, setLocation] = useState<UserLocation>({ status: 'pending', coordinate: null, placeName: null });
+  const [location, setLocation] = useState<UserPosition>({ status: 'pending', coordinate: null, placeName: null });
 
   useEffect(() => {
     let active = true;
@@ -43,5 +48,21 @@ export function useUserLocation(): UserLocation {
     return () => { active = false; };
   }, []);
 
-  return location;
+  const refresh = useCallback(async () => {
+    try {
+      const permission = await Location.getForegroundPermissionsAsync();
+      if (!permission.granted) return null;
+      const fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const coordinate = { latitude: fix.coords.latitude, longitude: fix.coords.longitude };
+      setLocation((current) => ({ status: 'granted', coordinate, placeName: current.placeName }));
+      void nameOf(coordinate).then((placeName) => {
+        if (placeName) setLocation((current) => (current.coordinate === coordinate ? { ...current, placeName } : current));
+      });
+      return coordinate;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  return useMemo(() => ({ ...location, refresh }), [location, refresh]);
 }

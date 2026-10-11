@@ -1,4 +1,4 @@
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/reusables/text';
 import { useAuth } from '@/providers/auth-provider';
@@ -18,7 +18,20 @@ type MapHudProps = {
   areaLabel: string;
   collectedOnly: boolean;
   onToggleCollectedOnly: () => void;
+  /** Moves the 5 km area to where the player is now. Hidden when there is no real location. */
+  onUpdateArea: (() => void) | null;
+  updatingArea: boolean;
+  nearby: 'idle' | 'loading' | 'ready' | 'failed';
+  onRetryNearby: () => void;
 };
+
+function TargetGlyph({ color }: { color: string }) {
+  return (
+    <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2.5, borderColor: color, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
+    </View>
+  );
+}
 
 function PinGlyph() {
   return (
@@ -39,7 +52,7 @@ function FilterGlyph({ color }: { color: string }) {
   );
 }
 
-export function MapHud({ discovered, total, areaLabel, collectedOnly, onToggleCollectedOnly }: MapHudProps) {
+export function MapHud({ discovered, total, areaLabel, collectedOnly, onToggleCollectedOnly, onUpdateArea, updatingArea, nearby, onRetryNearby }: MapHudProps) {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const hud = profile ? hudProgress(profile, discovered, total) : null;
@@ -76,6 +89,21 @@ export function MapHud({ discovered, total, areaLabel, collectedOnly, onToggleCo
             <Text numberOfLines={1} className="text-xs font-medium" style={{ color: INK_MUTED }}>Within 5 km</Text>
           </View>
         </View>
+        <View className="flex-row items-center gap-2">
+        {onUpdateArea ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Update nearby area to where you are now"
+            accessibilityState={{ busy: updatingArea, disabled: updatingArea }}
+            disabled={updatingArea}
+            onPress={onUpdateArea}
+            hitSlop={6}
+            className="h-12 w-12 items-center justify-center rounded-full active:opacity-70"
+            style={GLASS}
+          >
+            {updatingArea ? <ActivityIndicator color={GOLD} /> : <TargetGlyph color={INK} />}
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityRole="switch"
           accessibilityState={{ checked: collectedOnly }}
@@ -87,7 +115,19 @@ export function MapHud({ discovered, total, areaLabel, collectedOnly, onToggleCo
         >
           <FilterGlyph color={collectedOnly ? '#1b130b' : INK} />
         </Pressable>
+        </View>
       </View>
+      {nearby === 'failed' ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Couldn't load nearby restaurants. Retry." onPress={onRetryNearby} className="min-h-11 flex-row items-center self-start rounded-full px-3.5 active:opacity-70" style={[GLASS, { borderColor: 'rgba(223,118,109,0.7)' }]}>
+          <Text className="text-xs font-semibold" style={{ color: INK }}>Couldn’t load nearby restaurants — <Text className="text-xs font-extrabold" style={{ color: GOLD }}>retry</Text></Text>
+        </Pressable>
+      ) : null}
+      {nearby === 'loading' ? (
+        <View accessibilityRole="progressbar" accessibilityLabel="Finding nearby restaurants" className="flex-row items-center gap-2 self-start rounded-full px-3.5 py-2" style={GLASS}>
+          <ActivityIndicator size="small" color={GOLD} />
+          <Text className="text-xs font-semibold" style={{ color: INK_MUTED }}>Finding nearby restaurants…</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
