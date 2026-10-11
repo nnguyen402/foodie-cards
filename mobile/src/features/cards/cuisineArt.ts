@@ -5,15 +5,17 @@ import type { CuisineIconKind } from './themes';
 // the map token colour, so they can never disagree. Free text from OSM or the catalog goes
 // through normalizeCuisine; nothing else decides what cuisine a restaurant is.
 
-export const CUISINE_KEYS = ['burger', 'pizza', 'asian', 'mexican', 'bbq', 'chicken', 'coffee', 'dessert', 'breakfast', 'southern', 'seafood', 'default'] as const;
+export const CUISINE_KEYS = ['burger', 'pizza', 'asian', 'mexican', 'bbq', 'chicken', 'coffee', 'dessert', 'breakfast', 'southern', 'seafood', 'steak', 'japanese', 'default'] as const;
 export type CuisineKey = (typeof CUISINE_KEYS)[number];
 
 const TAGS: Record<string, CuisineKey> = {
   burger: 'burger', burgers: 'burger', hamburger: 'burger', american: 'burger', fast_food: 'burger', sandwich: 'burger', hot_dog: 'burger', diner: 'burger',
   pizza: 'pizza', pizzeria: 'pizza', italian_pizza: 'pizza',
-  asian: 'asian', chinese: 'asian', japanese: 'asian', sushi: 'asian', thai: 'asian', vietnamese: 'asian', korean: 'asian', ramen: 'asian', noodle: 'asian', indian: 'asian', pho: 'asian', dim_sum: 'asian',
+  asian: 'asian', chinese: 'asian', thai: 'asian', vietnamese: 'asian', korean: 'asian', ramen: 'asian', noodle: 'asian', indian: 'asian', pho: 'asian', dim_sum: 'asian',
   mexican: 'mexican', tex_mex: 'mexican', tacos: 'mexican', taco: 'mexican', burrito: 'mexican',
-  bbq: 'bbq', barbecue: 'bbq', barbeque: 'bbq', steak_house: 'bbq', steak: 'bbq', grill: 'bbq',
+  bbq: 'bbq', barbecue: 'bbq', barbeque: 'bbq', grill: 'bbq',
+  steak: 'steak', steak_house: 'steak', steakhouse: 'steak',
+  japanese: 'japanese', sushi: 'japanese',
   chicken: 'chicken', wings: 'chicken', fried_chicken: 'chicken',
   cafe: 'coffee', coffee: 'coffee', coffee_shop: 'coffee', tea: 'coffee', bubble_tea: 'coffee',
   dessert: 'dessert', ice_cream: 'dessert', donut: 'dessert', doughnut: 'dessert', bakery: 'dessert', cake: 'dessert', frozen_yogurt: 'dessert', waffle: 'dessert',
@@ -54,7 +56,7 @@ export function cuisineKeyFor(restaurant: { name: string; category: string }): C
 // The code-drawn fallback icon for each key. Several cuisines share a drawing for now.
 const ICONS: Record<CuisineKey, CuisineIconKind> = {
   burger: 'burger', pizza: 'pizza', asian: 'sushi', mexican: 'plate', bbq: 'bbq', chicken: 'southern',
-  coffee: 'coffee', dessert: 'plate', breakfast: 'coffee', southern: 'southern', seafood: 'sushi', default: 'plate',
+  coffee: 'coffee', dessert: 'plate', breakfast: 'coffee', southern: 'southern', seafood: 'sushi', steak: 'bbq', japanese: 'sushi', default: 'plate',
 };
 
 export function cuisineIconFor(key: CuisineKey): CuisineIconKind {
@@ -75,6 +77,8 @@ const COLORS: Record<CuisineKey, CuisineColors> = {
   breakfast: { ring: '#f5d13d', fill: '#3a3009', ink: '#fff2a6' },
   southern: { ring: '#c9772e', fill: '#33200c', ink: '#ffddb0' },
   seafood: { ring: '#4aa3df', fill: '#0f2a3d', ink: '#cfeaff' },
+  steak: { ring: '#b0343f', fill: '#2f0c10', ink: '#ffcfc9' },
+  japanese: { ring: '#8a7be0', fill: '#1d1840', ink: '#dcd6ff' },
   default: { ring: '#a99b8a', fill: '#2a241d', ink: '#f2e6d6' },
 };
 
@@ -96,6 +100,8 @@ const ART: Partial<Record<CuisineKey, Art>> = {
   chicken: { token: () => require('../../../assets/cuisine/chicken.png'), card: () => require('../../../assets/cuisine/chicken-card.jpg') },
   southern: { token: () => require('../../../assets/cuisine/southern.png'), card: () => require('../../../assets/cuisine/southern-card.jpg') },
   seafood: { token: () => require('../../../assets/cuisine/seafood.png'), card: () => require('../../../assets/cuisine/seafood-card.jpg') },
+  steak: { token: () => require('../../../assets/cuisine/steak.png'), card: () => require('../../../assets/cuisine/steak-card.jpg') },
+  japanese: { token: () => require('../../../assets/cuisine/japanese.png'), card: () => require('../../../assets/cuisine/japanese-card.jpg') },
 };
 
 export function hasCuisineArt(key: CuisineKey): boolean {

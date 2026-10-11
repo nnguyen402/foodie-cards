@@ -36,6 +36,8 @@ const ABILITY: Record<CuisineKey, string> = {
   breakfast: 'Early Bird — bonus XP before 10am',
   southern: 'Comfort Streak — bonus XP on back-to-back visits',
   seafood: 'Catch of the Day — bonus XP on a new dish',
+  steak: 'Prime Cut — +20% XP on dinner visits',
+  japanese: 'Blade Master — bonus XP for trying something new',
   default: 'Local Legend — earn XP on every visit',
 };
 

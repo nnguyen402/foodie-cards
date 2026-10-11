@@ -8,7 +8,9 @@ describe('normalizeCuisine', () => {
     expect(normalizeCuisine('burger;american')).toBe('burger');
     expect(normalizeCuisine('american;burger')).toBe('burger');
     expect(normalizeCuisine('regional;chicken')).toBe('chicken');
-    for (const tag of ['chinese', 'japanese', 'sushi', 'thai', 'vietnamese', 'korean', 'ramen']) expect(normalizeCuisine(tag)).toBe('asian');
+    for (const tag of ['chinese', 'thai', 'vietnamese', 'korean', 'ramen']) expect(normalizeCuisine(tag)).toBe('asian');
+    for (const tag of ['japanese', 'sushi']) expect(normalizeCuisine(tag)).toBe('japanese');
+    for (const tag of ['steak_house', 'steakhouse', 'steak']) expect(normalizeCuisine(tag)).toBe('steak');
     expect(normalizeCuisine('tex-mex')).toBe('mexican');
     expect(normalizeCuisine('Tacos')).toBe('mexican');
     expect(normalizeCuisine('barbecue')).toBe('bbq');
@@ -52,7 +54,7 @@ describe('cuisine art, colours and abilities', () => {
 
 describe('cuisine art files', () => {
   it('are listed only for cuisines with a committed image; the rest fall back to the drawn icon', () => {
-    for (const key of ['burger', 'pizza', 'asian', 'breakfast', 'coffee', 'chicken', 'southern', 'seafood'] as const) expect(hasCuisineArt(key)).toBe(true);
+    for (const key of ['burger', 'pizza', 'asian', 'breakfast', 'coffee', 'chicken', 'southern', 'seafood', 'steak', 'japanese'] as const) expect(hasCuisineArt(key)).toBe(true);
     for (const key of ['mexican', 'bbq', 'dessert', 'default'] as const) expect(hasCuisineArt(key)).toBe(false);
   });
 });
