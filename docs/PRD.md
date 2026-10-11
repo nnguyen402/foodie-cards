@@ -1,8 +1,11 @@
 # Foodie Cards — Product Requirements Document
 
-**Audience:** Product, design, engineering, and demo teammates.  
-**Baseline:** Hackathon MVP, consolidated from the agreed build plan.  
-**Primary demo device:** Physical iPhone.  
+**Audience:** Product, design, engineering, and demo teammates.
+
+**Baseline:** Hackathon MVP, consolidated from the agreed build plan.
+
+**Primary demo device:** Physical iPhone.
+
 **Implementation status:** Foundation implemented; receipt-to-card features and final visual design remain to be built.
 
 ## 1. Product and problem
