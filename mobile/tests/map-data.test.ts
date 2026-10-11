@@ -45,8 +45,8 @@ describe('discovery area', () => {
   const midtown = { latitude: 33.781, longitude: -84.383 };
   const newYork = { latitude: 40.71, longitude: -74.0 };
 
-  it('is a fixed 5 km circle around the player, wherever they are', () => {
-    expect(DISCOVERY_RADIUS_METRES).toBe(5000);
+  it('is a fixed 3 km circle around the player, wherever they are', () => {
+    expect(DISCOVERY_RADIUS_METRES).toBe(3000);
     expect(discoveryArea(midtown)).toEqual({ centre: midtown, fallback: false });
     expect(discoveryArea(newYork)).toEqual({ centre: newYork, fallback: false });
   });
@@ -55,14 +55,15 @@ describe('discovery area', () => {
     expect(discoveryArea(null)).toEqual({ centre: ATLANTA_DOWNTOWN, fallback: true });
   });
 
-  it('keeps all five seeded restaurants inside the downtown fallback area', () => {
-    for (const coordinate of Object.values(RESTAURANT_COORDINATES)) expect(inDiscoveryArea(coordinate, discoveryArea(null))).toBe(true);
+  it('keeps the three seeded restaurants nearest downtown inside the fallback area; Fox Bros and Antico are further than 3 km', () => {
+    const inside = Object.entries(RESTAURANT_COORDINATES).filter(([, coordinate]) => inDiscoveryArea(coordinate, discoveryArea(null)));
+    expect(inside.map(([id]) => id.slice(-1)).sort()).toEqual(['1', '3', '4']);
   });
 
   it('uses real distance: just inside is in, just outside is out', () => {
     const area = discoveryArea(midtown);
-    expect(inDiscoveryArea({ latitude: midtown.latitude + 0.0440, longitude: midtown.longitude }, area)).toBe(true);
-    expect(inDiscoveryArea({ latitude: midtown.latitude + 0.0460, longitude: midtown.longitude }, area)).toBe(false);
+    expect(inDiscoveryArea({ latitude: midtown.latitude + 0.0265, longitude: midtown.longitude }, area)).toBe(true);
+    expect(inDiscoveryArea({ latitude: midtown.latitude + 0.0275, longitude: midtown.longitude }, area)).toBe(false);
     expect(inDiscoveryArea(RESTAURANT_COORDINATES['10000000-0000-4000-8000-000000000004'], discoveryArea(newYork))).toBe(false);
   });
 

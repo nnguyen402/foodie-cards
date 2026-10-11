@@ -121,7 +121,7 @@ export function GameMap() {
 
   const animated = useMemo(() => (reducedMotion ? new Set<string>() : animatedPinIds(restaurants, region)), [reducedMotion, restaurants, region]);
   const selected = restaurants.find((restaurant) => restaurant.id === selectedId) ?? null;
-  // Moves the 5 km circle to where the map is looking and fetches there. The camera stays put.
+  // Moves the 3 km circle to where the map is looking and fetches there. The camera stays put.
   const searchHere = useCallback(() => {
     if (!mapCentre) return;
     const next = { centre: mapCentre, fallback: false };
@@ -247,7 +247,7 @@ export function GameMap() {
       {!data.loading && !data.error && data.nearby !== 'loading' && area && restaurants.length === 0 ? (
         <View pointerEvents="none" style={styles.empty}>
           <Text className="text-center text-sm font-semibold" style={{ color: '#f6ede2' }}>
-            {collectedOnly ? 'No collected restaurants within 5 km yet.' : data.nearby === 'failed' ? 'Nearby restaurants could not be loaded, and none of ours are within 5 km.' : 'OpenStreetMap lists no restaurants within 5 km of here.'}
+            {collectedOnly ? 'No collected restaurants within 3 km yet.' : data.nearby === 'failed' ? 'Nearby restaurants could not be loaded, and none of ours are within 3 km.' : 'OpenStreetMap lists no restaurants within 3 km of here.'}
           </Text>
         </View>
       ) : null}
