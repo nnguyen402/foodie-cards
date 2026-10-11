@@ -82,11 +82,19 @@ export function cuisineColors(key: CuisineKey): CuisineColors {
   return COLORS[key];
 }
 
-// Illustrations that exist in mobile/assets/cuisine/. Add a line when a file is committed:
-//   burger: require('../../../assets/cuisine/burger.png'),
-const ART: Partial<Record<CuisineKey, ImageSourcePropType>> = {};
+// Illustrations that exist in mobile/assets/cuisine/. Add a line when a file is committed.
+// Loaders, not values, so the images are only required where the app (Metro) asks for them.
+const ART: Partial<Record<CuisineKey, () => ImageSourcePropType>> = {
+  chicken: () => require('../../../assets/cuisine/chicken.png'),
+  southern: () => require('../../../assets/cuisine/southern.png'),
+  seafood: () => require('../../../assets/cuisine/seafood.png'),
+};
+
+export function hasCuisineArt(key: CuisineKey): boolean {
+  return ART[key] !== undefined;
+}
 
 /** The prepared image for a cuisine, or null to fall back to the drawn icon. */
 export function getCuisineArt(key: CuisineKey): ImageSourcePropType | null {
-  return ART[key] ?? null;
+  return ART[key]?.() ?? null;
 }

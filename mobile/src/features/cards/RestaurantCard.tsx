@@ -75,9 +75,9 @@ export function RestaurantCard({ card, width, heroSource, uncollected = false, s
         ) : (
           <>
             <CardPattern patternKey={theme.patternKey} color={theme.accentColor} width={rects.art.w} height={rects.art.h} scale={rects.scale} />
-            <View style={[styles.centered, { width: px(300), height: px(300), borderRadius: px(150), backgroundColor: theme.accentColor }]}>
+            <View style={[styles.centered, { width: px(300), height: px(300), borderRadius: px(150), backgroundColor: theme.accentColor, overflow: 'hidden' }]}>
               {cuisineArt ? (
-                <Image source={cuisineArt} resizeMode="contain" style={{ width: px(260), height: px(260) }} accessibilityIgnoresInvertColors />
+                <Image source={cuisineArt} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
               ) : (
                 <CuisineIcon kind={cuisineIconFor(cuisine)} size={px(190)} color={onAccent} cutout={theme.accentColor} />
               )}

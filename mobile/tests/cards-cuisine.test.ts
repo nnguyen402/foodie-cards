@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CUISINE_KEYS, cuisineColors, cuisineIconFor, cuisineKeyFor, getCuisineArt, normalizeCuisine } from '../src/features/cards/cuisineArt';
+import { CUISINE_KEYS, cuisineColors, cuisineIconFor, cuisineKeyFor, hasCuisineArt, normalizeCuisine } from '../src/features/cards/cuisineArt';
 import { cuisineIcon } from '../src/features/cards/themes';
 import { abilityLine } from '../src/features/map/labels';
 
@@ -40,13 +40,19 @@ describe('cuisineKeyFor', () => {
 });
 
 describe('cuisine art, colours and abilities', () => {
-  it('has colours and an ability line for every key, and no art files yet', () => {
+  it('has colours and an ability line for every key', () => {
     for (const key of CUISINE_KEYS) {
       expect(cuisineColors(key).ring).toMatch(/^#/);
       expect(abilityLine(key)).toContain('—');
-      expect(getCuisineArt(key)).toBeNull();
     }
     expect(abilityLine('burger')).toBe('Grill Master — +25% XP on repeat visits');
     expect(abilityLine('coffee')).toBe('Morning Boost — bonus XP before 11am');
+  });
+});
+
+describe('cuisine art files', () => {
+  it('are listed only for cuisines with a committed image; the rest fall back to the drawn icon', () => {
+    for (const key of ['chicken', 'southern', 'seafood'] as const) expect(hasCuisineArt(key)).toBe(true);
+    for (const key of ['burger', 'dessert', 'default'] as const) expect(hasCuisineArt(key)).toBe(false);
   });
 });

@@ -16,6 +16,9 @@ coverage/
 *.tsbuildinfo
 *.log
 
+# Raw cuisine art from the design team; only the resized <key>.png files are committed
+mobile/assets/cuisine/_incoming/
+
 # Local editor and OS files
 .DS_Store
 Thumbs.db
