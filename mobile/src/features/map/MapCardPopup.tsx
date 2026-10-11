@@ -48,7 +48,7 @@ export function MapCardPopup({ restaurant, imageUrl, onScan, onViewCard, onClose
     >
       <Pressable accessibilityRole="button" accessibilityLabel="Close card" onPress={onClose} style={StyleSheet.absoluteFill} />
       <Animated.View style={[styles.content, reducedMotion ? null : { animationName: popIn, animationDuration: 260, animationTimingFunction: cubicBezier(0.23, 1, 0.32, 1), animationFillMode: 'both' }]}>
-        <RestaurantCard card={shown} width={cardWidth} uncollected={!card} heroSource={imageUrl ? { uri: imageUrl } : undefined} />
+        <RestaurantCard card={shown} width={cardWidth} uncollected={!card} cuisine={restaurant.cuisine} heroSource={imageUrl ? { uri: imageUrl } : undefined} />
         <View className="items-center gap-1" style={{ maxWidth: cardWidth + 40 }}>
           <Text className="text-sm font-bold uppercase" style={{ color: GOLD, letterSpacing: 1.5 }}>
             {categoryLabel(restaurant.category)} · {card ? stageLabel(card.stage) : 'Not collected yet'}

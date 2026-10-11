@@ -2,41 +2,48 @@ import type { ImageSourcePropType } from 'react-native';
 import type { CuisineIconKind } from './themes';
 
 // One cuisine key per restaurant, used for the label, the code-drawn icon, the optional art and
-// the map token colour, so they can never disagree. Free text from OSM or the catalog goes
-// through normalizeCuisine; nothing else decides what cuisine a restaurant is.
+// the map token colour, so they can never disagree. It is worked out in one place, from
+// generic food words only (cuisine tags, then words in the name, then amenity=cafe). When
+// none of those say what the food is, the key is 'default' and there is no art: never a guess.
 
 export const CUISINE_KEYS = ['burger', 'pizza', 'asian', 'mexican', 'bbq', 'chicken', 'coffee', 'dessert', 'breakfast', 'southern', 'seafood', 'steak', 'japanese', 'default'] as const;
 export type CuisineKey = (typeof CUISINE_KEYS)[number];
 
+// OSM cuisine tag values (and our catalog categories, which use the same words).
 const TAGS: Record<string, CuisineKey> = {
-  burger: 'burger', burgers: 'burger', hamburger: 'burger', american: 'burger', fast_food: 'burger', sandwich: 'burger', hot_dog: 'burger', diner: 'burger',
+  burger: 'burger', burgers: 'burger', hamburger: 'burger',
   pizza: 'pizza', pizzeria: 'pizza', italian_pizza: 'pizza',
-  asian: 'asian', chinese: 'asian', thai: 'asian', vietnamese: 'asian', korean: 'asian', ramen: 'asian', noodle: 'asian', indian: 'asian', pho: 'asian', dim_sum: 'asian',
+  asian: 'asian', chinese: 'asian', thai: 'asian', vietnamese: 'asian', korean: 'asian', noodle: 'asian', pho: 'asian', dim_sum: 'asian',
   mexican: 'mexican', tex_mex: 'mexican', tacos: 'mexican', taco: 'mexican', burrito: 'mexican',
-  bbq: 'bbq', barbecue: 'bbq', barbeque: 'bbq', grill: 'bbq',
+  bbq: 'bbq', barbecue: 'bbq', barbeque: 'bbq',
   steak: 'steak', steak_house: 'steak', steakhouse: 'steak',
-  japanese: 'japanese', sushi: 'japanese',
+  japanese: 'japanese', sushi: 'japanese', ramen: 'japanese',
   chicken: 'chicken', wings: 'chicken', fried_chicken: 'chicken',
-  cafe: 'coffee', coffee: 'coffee', coffee_shop: 'coffee', tea: 'coffee', bubble_tea: 'coffee',
-  dessert: 'dessert', ice_cream: 'dessert', donut: 'dessert', doughnut: 'dessert', bakery: 'dessert', cake: 'dessert', frozen_yogurt: 'dessert', waffle: 'dessert',
-  breakfast: 'breakfast', brunch: 'breakfast', pancake: 'breakfast', bagel: 'breakfast',
+  cafe: 'coffee', coffee: 'coffee', coffee_shop: 'coffee',
+  dessert: 'dessert', ice_cream: 'dessert', donut: 'dessert', doughnut: 'dessert', bakery: 'dessert', cake: 'dessert', frozen_yogurt: 'dessert',
+  breakfast: 'breakfast', brunch: 'breakfast', pancake: 'breakfast', waffle: 'breakfast', bagel: 'breakfast',
   southern: 'southern', soul_food: 'southern', soul: 'southern', cajun: 'southern', creole: 'southern',
   seafood: 'seafood', fish: 'seafood', fish_and_chips: 'seafood', oyster: 'seafood',
 };
 
-// Our seeded restaurants, by name, so they keep their cuisine even if a category is later reworded.
-const SEEDED: Record<string, CuisineKey> = {
-  'the varsity': 'burger',
-  varsity: 'burger',
-  'antico pizza': 'pizza',
-  'fox bros bar b q': 'bbq',
-  'fox bros bbq': 'bbq',
-  'mary mac s tea room': 'southern',
-  'busy bee cafe': 'southern',
-};
+// Generic food words in a restaurant's name, in priority order. Whole words only ("pho" does
+// not match "photo"), with or without a plural "s". No brand names, ever.
+const NAME_WORDS: [CuisineKey, string[]][] = [
+  ['pizza', ['pizza', 'pizzeria']],
+  ['mexican', ['taco', 'taqueria', 'cantina', 'burrito', 'mexican', 'tex mex']],
+  ['japanese', ['sushi', 'ramen', 'japanese']],
+  ['asian', ['pho', 'thai', 'wok', 'noodle', 'dumpling', 'asian', 'chinese', 'korean']],
+  ['bbq', ['bbq', 'barbecue', 'smokehouse']],
+  ['chicken', ['wing', 'chicken']],
+  ['burger', ['burger']],
+  ['coffee', ['coffee', 'cafe', 'espresso', 'roast', 'roaster', 'roastery']],
+  ['breakfast', ['pancake', 'waffle', 'breakfast', 'diner']],
+  ['steak', ['steak', 'steakhouse']],
+  ['seafood', ['seafood', 'oyster', 'crab', 'fish']],
+  ['dessert', ['bakery', 'dessert', 'ice cream', 'donut', 'doughnut']],
+];
 
 const slug = (raw: string) => raw.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-const spaced = (raw: string) => slug(raw).replace(/_/g, ' ');
 
 /** "burger;american", "Tex-Mex", "coffee_shop" → one key. The first value OSM lists that we know wins. */
 export function normalizeCuisine(raw: string | null | undefined): CuisineKey {
@@ -48,9 +55,29 @@ export function normalizeCuisine(raw: string | null | undefined): CuisineKey {
   return 'default';
 }
 
-/** A restaurant's cuisine: its name if it is one of ours, otherwise its category. */
-export function cuisineKeyFor(restaurant: { name: string; category: string }): CuisineKey {
-  return SEEDED[spaced(restaurant.name)] ?? normalizeCuisine(restaurant.category);
+function cuisineFromName(name: string): CuisineKey {
+  const words = ` ${slug(name).replace(/_/g, ' ')} `;
+  for (const [key, list] of NAME_WORDS) {
+    if (list.some((word) => words.includes(` ${word} `) || words.includes(` ${word}s `))) return key;
+  }
+  return 'default';
+}
+
+export type CuisineSource = {
+  name: string;
+  /** OSM cuisine tag, or our catalog category: both use the same words. */
+  cuisine?: string | null;
+  /** OSM amenity, when the place came from OpenStreetMap. */
+  amenity?: string | null;
+};
+
+/** The one cuisine decision: cuisine tags, then words in the name, then amenity=cafe, otherwise 'default' (no art). */
+export function cuisineKeyFor({ name, cuisine, amenity }: CuisineSource): CuisineKey {
+  const fromTag = normalizeCuisine(cuisine);
+  if (fromTag !== 'default') return fromTag;
+  const fromName = cuisineFromName(name);
+  if (fromName !== 'default') return fromName;
+  return amenity === 'cafe' ? 'coffee' : 'default';
 }
 
 // The code-drawn fallback icon for each key. Several cuisines share a drawing for now.
@@ -93,6 +120,8 @@ export function cuisineColors(key: CuisineKey): CuisineColors {
 type Art = { token: () => ImageSourcePropType; card: () => ImageSourcePropType };
 const ART: Partial<Record<CuisineKey, Art>> = {
   burger: { token: () => require('../../../assets/cuisine/burger.png'), card: () => require('../../../assets/cuisine/burger-card.jpg') },
+  mexican: { token: () => require('../../../assets/cuisine/mexican.png'), card: () => require('../../../assets/cuisine/mexican-card.jpg') },
+  dessert: { token: () => require('../../../assets/cuisine/dessert.png'), card: () => require('../../../assets/cuisine/dessert-card.jpg') },
   pizza: { token: () => require('../../../assets/cuisine/pizza.png'), card: () => require('../../../assets/cuisine/pizza-card.jpg') },
   asian: { token: () => require('../../../assets/cuisine/asian.png'), card: () => require('../../../assets/cuisine/asian-card.jpg') },
   breakfast: { token: () => require('../../../assets/cuisine/breakfast.png'), card: () => require('../../../assets/cuisine/breakfast-card.jpg') },

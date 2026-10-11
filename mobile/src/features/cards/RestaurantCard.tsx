@@ -3,7 +3,7 @@ import { Image, StyleSheet, Text, View, type ImageSourcePropType, type StyleProp
 import { CardFrame } from './CardFrame';
 import { CardPattern } from './CardPattern';
 import { CuisineArt } from './CuisineArtView';
-import { cuisineKeyFor, hasCuisineArt } from './cuisineArt';
+import { cuisineKeyFor, hasCuisineArt, type CuisineKey } from './cuisineArt';
 import { nameFont } from './fonts';
 import { frameRects, type WindowRect } from './frameLayout';
 import { describeProgress } from './progress';
@@ -26,6 +26,8 @@ type RestaurantCardProps = {
   heroSource?: ImageSourcePropType;
   /** Preview of a restaurant the user has not collected: no stage, XP or visits are shown. */
   uncollected?: boolean;
+  /** Overrides the cuisine worked out from the name and category, so a screen that already decided one (the map) cannot disagree. */
+  cuisine?: CuisineKey;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -33,10 +35,10 @@ function windowStyle(box: WindowRect, backgroundColor: string): ViewStyle {
   return { position: 'absolute', left: box.x, top: box.y, width: box.w, height: box.h, borderRadius: box.r, backgroundColor, overflow: 'hidden' };
 }
 
-export function RestaurantCard({ card, width, heroSource, uncollected = false, style }: RestaurantCardProps) {
+export function RestaurantCard({ card, width, heroSource, uncollected = false, cuisine: cuisineOverride, style }: RestaurantCardProps) {
   const rects = useMemo(() => frameRects(width), [width]);
   const { restaurant } = card;
-  const cuisine = cuisineKeyFor(restaurant);
+  const cuisine = cuisineOverride ?? cuisineKeyFor({ name: restaurant.name, cuisine: restaurant.category });
   const { theme } = restaurant;
   const compact = width < COMPACT_BELOW;
   const px = (value: number) => value * rects.scale;

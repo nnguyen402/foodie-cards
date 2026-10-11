@@ -64,7 +64,7 @@ export default function CardDetailScreen() {
         <View style={styles.cardWrap}><RestaurantCard card={card} width={cardWidth} /></View>
         <View style={styles.rarity}>
           <AppText strong>{stageLabel(card.stage)}</AppText>
-          <AppText variant="small" muted>{abilityLine(cuisineKeyFor(card.restaurant))}</AppText>
+          <AppText variant="small" muted>{abilityLine(cuisineKeyFor({ name: card.restaurant.name, cuisine: card.restaurant.category }))}</AppText>
         </View>
 
         <Section title="Progress">

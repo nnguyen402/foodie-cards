@@ -24,7 +24,7 @@ function toPin(place: OsmPlace, owned: Map<string, MapRestaurant>): MapRestauran
   const matchedBrandKey = brandKeyOf(place);
   const brandOwner = owned.get(matchedBrandKey) ?? owned.get(nameKey(place));
   const category = place.cuisine ?? place.amenity;
-  const cuisine = cuisineKeyFor({ name: place.name, category });
+  const cuisine = cuisineKeyFor({ name: place.name, cuisine: place.cuisine, amenity: place.amenity });
   return {
     id: place.key,
     source: 'osm',

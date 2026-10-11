@@ -108,7 +108,7 @@ describe('buildMapRestaurants', () => {
 
   it('splits the location label into neighbourhood and address and picks the icon', () => {
     const [pin] = buildMapRestaurants({ owned: [], locked: [varsity] });
-    expect(pin).toMatchObject({ neighbourhood: 'Downtown', address: '61 North Ave NW', icon: 'burger', category: 'fast_food', theme });
+    expect(pin).toMatchObject({ neighbourhood: 'Downtown', address: '61 North Ave NW', icon: 'plate', cuisine: 'default', category: 'fast_food', theme });
   });
 
   it('leaves out restaurants without coordinates', () => {

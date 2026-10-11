@@ -44,7 +44,7 @@ function toPin(place: Place, card: MapRestaurant['card']): MapRestaurant | null 
   const coordinate = coordinateFor(place);
   if (!coordinate) return null;
   const [neighbourhood, address = ''] = place.locationLabel.split(' · ');
-  const cuisine = cuisineKeyFor(place);
+  const cuisine = cuisineKeyFor({ name: place.name, cuisine: place.category });
   return { id: place.id, source: 'catalog', osm: null, name: place.name, brandKey: `name:${normalizedName(place.name)}`, neighbourhood, address, category: place.category, cuisine, icon: cuisineIconFor(cuisine), theme: place.theme, coordinate, card };
 }
 

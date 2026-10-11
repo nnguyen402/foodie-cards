@@ -1,4 +1,4 @@
-import { cuisineIconFor, normalizeCuisine } from '../cards/cuisineArt';
+import { cuisineIconFor, cuisineKeyFor } from '../cards/cuisineArt';
 import type { CuisineIconKind } from '../cards/themes';
 import type { Coordinate } from './coordinates';
 
@@ -64,5 +64,5 @@ export function normalizeOsm(response: unknown): OsmPlace[] {
 }
 
 export function osmIcon(cuisine: string | null, amenity: string): CuisineIconKind {
-  return cuisineIconFor(normalizeCuisine(cuisine ?? amenity));
+  return cuisineIconFor(cuisineKeyFor({ name: '', cuisine, amenity }));
 }
