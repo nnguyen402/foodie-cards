@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { AppText } from '@/components/ui/app-text';
 import { MessagePanel } from '@/components/ui/message-panel';
 import { formatCalendarDate } from '@/features/cards/detail';
@@ -145,10 +146,12 @@ export default function CardDetailScreen() {
       <Stack.Screen
         options={
           ready
-            ? { title, headerStyle: { backgroundColor: theme.shades[0] }, headerTintColor: theme.label, headerTitleStyle: { color: theme.label }, headerShadowVisible: false, statusBarStyle: 'light' }
+            ? { title, headerStyle: { backgroundColor: theme.shades[0] }, headerTintColor: theme.label, headerTitleStyle: { color: theme.label }, headerShadowVisible: false }
             : { title }
         }
       />
+      {/* Set from inside the screen: Expo Go cannot change the Info.plist key that a Stack option needs. */}
+      {ready ? <StatusBar style="light" /> : null}
       {ready ? <RarityBackground stage={stage} /> : null}
       <ScrollView contentInsetAdjustmentBehavior="automatic" style={styles.scroll} contentContainerStyle={styles.content}>
         {content}
