@@ -1,8 +1,8 @@
 import { memo } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, { cubicBezier } from 'react-native-reanimated';
-import { CuisineIcon } from '../cards/CuisineIcon';
-import { cuisineColors, getCuisineArt } from '../cards/cuisineArt';
+import { CuisineArt } from '../cards/CuisineArtView';
+import { cuisineColors, hasCuisineArt } from '../cards/cuisineArt';
 import type { MapRestaurant } from './mapRestaurants';
 import { idleMotion, type IdleMotion } from './pinMotion';
 import { pinLook } from './pinStyle';
@@ -114,7 +114,7 @@ export const RestaurantPin = memo(function RestaurantPin({ restaurant, animate, 
   const look = pinLook(restaurant.card?.stage ?? null);
   const motion = idleMotion(restaurant.icon);
   const colors = cuisineColors(restaurant.cuisine);
-  const art = getCuisineArt(restaurant.cuisine);
+  const art = hasCuisineArt(restaurant.cuisine);
   return (
     <View style={[styles.box, { opacity: look.opacity }]}>
       {look.sparkle ? <Crown /> : <View style={styles.crown} />}
@@ -123,17 +123,14 @@ export const RestaurantPin = memo(function RestaurantPin({ restaurant, animate, 
           <Animated.View style={[styles.glow, { boxShadow: `0 0 18px ${look.glow}, 0 0 6px ${look.glow}`, borderColor: look.glow }, animate ? { animationName: glowPulse, ...loop(2400) } : null]} />
         ) : null}
         <View style={[styles.badge, { backgroundColor: colors.fill, borderColor: colors.ring }]}>
-          {art ? (
-            // Art fills the circle, cropped rather than stretched, and stays still.
-            <Image source={art} resizeMode="cover" style={styles.art} accessibilityIgnoresInvertColors />
-          ) : (
-            <>
-              <Animated.View style={animate ? ICON_MOTION[motion] : null}>
-                <CuisineIcon kind={restaurant.icon} size={ICON} color={colors.ink} cutout={colors.fill} />
-              </Animated.View>
-              {animate ? <Extras motion={motion} /> : null}
-            </>
-          )}
+          <CuisineArt
+            cuisine={restaurant.cuisine}
+            variant="token"
+            tint={{ background: colors.fill, ink: colors.ink }}
+            // Art stays still; only the drawn icon runs its idle motion.
+            iconWrapper={(icon) => <Animated.View style={animate ? ICON_MOTION[motion] : null}>{icon}</Animated.View>}
+          />
+          {animate && !art ? <Extras motion={motion} /> : null}
         </View>
         {look.locked ? (
           <View style={styles.lock}>
@@ -160,7 +157,6 @@ const styles = StyleSheet.create({
   crownBand: { width: 32, height: 4, borderRadius: 1, backgroundColor: CROWN, marginBottom: 1 },
   pin: { width: BADGE, height: BADGE },
   badge: { position: 'absolute', left: 0, top: 0, width: BADGE, height: BADGE, borderRadius: BADGE / 2, borderWidth: RING, alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 8px rgba(0,0,0,0.45)' },
-  art: { width: BADGE - 2 * RING, height: BADGE - 2 * RING, borderRadius: (BADGE - 2 * RING) / 2 },
   glow: { position: 'absolute', left: 0, top: 0, width: BADGE, height: BADGE, borderRadius: BADGE / 2, borderWidth: 1 },
   steam: { position: 'absolute', top: 6, width: 4, height: 11, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.85)', opacity: 0 },
   flame: { position: 'absolute', top: 4, width: 8, height: 13, borderTopLeftRadius: 6, borderTopRightRadius: 6, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, transformOrigin: '50% 100%' },

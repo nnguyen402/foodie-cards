@@ -2,7 +2,7 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 import { Text } from '@/components/ui/reusables/text';
-import { CuisineIcon } from '../cards/CuisineIcon';
+import { CuisineArt } from '../cards/CuisineArtView';
 import { cuisineColors } from '../cards/cuisineArt';
 import { stageLabel } from '../cards/stageStyles';
 import { readableTextOn } from '../cards/themes';
@@ -50,10 +50,8 @@ export function RestaurantSheet({ restaurant, distance, onOpenCard, onScan, onVi
           onPress={onOpenCard}
           className="flex-1 flex-row items-center gap-3 active:opacity-80"
         >
-          <View className="h-16 w-16 items-center justify-center overflow-hidden rounded-2xl" style={{ backgroundColor: theme.primaryColor, borderWidth: 2, borderColor: colors.ring }}>
-            <View className="h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: theme.accentColor }}>
-              <CuisineIcon kind={restaurant.icon} size={30} color={readableTextOn(theme.accentColor)} cutout={theme.accentColor} />
-            </View>
+          <View className="h-16 w-16 overflow-hidden rounded-2xl" style={{ borderWidth: 2, borderColor: colors.ring }}>
+            <CuisineArt cuisine={restaurant.cuisine} variant="thumb" locked={!card} tint={{ background: colors.fill, ink: colors.ink }} />
           </View>
           <View className="flex-1 gap-1">
             <Text numberOfLines={1} className="text-lg font-extrabold" style={{ color: INK }}>{restaurant.name}</Text>
