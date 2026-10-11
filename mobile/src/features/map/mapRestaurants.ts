@@ -1,4 +1,5 @@
-import { cuisineIcon, type CuisineIconKind } from '../cards/themes';
+import { cuisineIconFor, cuisineKeyFor, type CuisineKey } from '../cards/cuisineArt';
+import type { CuisineIconKind } from '../cards/themes';
 import type { CardView } from '../cards/types';
 import { coordinateFor, type Coordinate } from './coordinates';
 
@@ -21,6 +22,8 @@ export type MapRestaurant = {
   neighbourhood: string;
   address: string;
   category: string;
+  /** The one cuisine key the label, icon, art and token colour all come from. */
+  cuisine: CuisineKey;
   icon: CuisineIconKind;
   theme: CardView['restaurant']['theme'];
   coordinate: Coordinate;
@@ -35,13 +38,14 @@ export function mapCardAvailability(pin: Pick<MapRestaurant, 'source' | 'card'>)
   return pin.source === 'catalog' ? 'scan' : 'unavailable';
 }
 
-type Place = CardView['restaurant'] & { latitude?: number | null; longitude?: number | null };
+type Place = CardView['restaurant'] & { latitude?: number | null; longitude?: number | null; brandKey?: string | null };
 
 function toPin(place: Place, card: MapRestaurant['card']): MapRestaurant | null {
   const coordinate = coordinateFor(place);
   if (!coordinate) return null;
   const [neighbourhood, address = ''] = place.locationLabel.split(' · ');
-  return { id: place.id, source: 'catalog', osm: null, name: place.name, brandKey: `name:${normalizedName(place.name)}`, neighbourhood, address, category: place.category, icon: cuisineIcon(place.category), theme: place.theme, coordinate, card };
+  const cuisine = cuisineKeyFor({ name: place.name, cuisine: place.category });
+  return { id: place.id, source: 'catalog', osm: null, name: place.name, brandKey: place.brandKey ?? `name:${normalizedName(place.name)}`, neighbourhood, address, category: place.category, cuisine, icon: cuisineIconFor(cuisine), theme: place.theme, coordinate, card };
 }
 
 /** Every restaurant we can place on the map, collected or not, in name order. */

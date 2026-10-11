@@ -152,7 +152,7 @@ export function createReceiptApi(options: ReceiptApiOptions) {
       const details = confirmed as Partial<ConfirmedReceipt>;
       const withinSubmitLimits = payload.success && uuidPattern.test(details.draftId ?? '')
         && uuidPattern.test(details.submissionId ?? '')
-        && uuidPattern.test(details.restaurantId ?? '')
+        && (details.restaurantId === undefined || uuidPattern.test(details.restaurantId))
         && (details.receiptNumber === null || (typeof details.receiptNumber === 'string' && details.receiptNumber.length <= 120))
         && Number.isSafeInteger(details.totalMinor)
         && Array.isArray(details.items)

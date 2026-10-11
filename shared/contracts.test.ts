@@ -29,6 +29,11 @@ describe('shared API contracts', () => {
     expect(ratingSchema.parse(null)).toBeNull();
     expect(ratingSchema.parse(0)).toBe(0);
     expect(ratingSchema.safeParse(1.25).success).toBe(false);
+    expect(ratingSchema.safeParse(4.3).success).toBe(true);
+    expect(ratingSchema.safeParse(0.1).success).toBe(true);
+    expect(ratingSchema.safeParse(4.35).success).toBe(false);
+    expect(ratingSchema.safeParse(5.1).success).toBe(false);
+    expect(ratingSchema.safeParse(-0.1).success).toBe(false);
   });
 
   it('accepts only editable profile fields', () => {
@@ -55,5 +60,21 @@ describe('shared API contracts', () => {
     expect(restaurantThemeSchema.safeParse({
       primaryColor: 'red', accentColor: '#223344', fontKey: 'rounded', patternKey: 'none',
     }).success).toBe(false);
+  });
+});
+
+describe('confirmed receipt place', () => {
+  const base = { draftId: 'd', submissionId: 's', receiptDate: '2026-10-11', receiptNumber: null, totalMinor: 1000, currency: 'USD', items: [{ originalText: 'x', confirmedName: 'x', quantity: 1 }] };
+  const place = { osmType: 'node', osmId: 42, name: 'Chick-fil-A', brandKey: 'name:chick fil a', cuisine: 'chicken', latitude: 33.7, longitude: -84.4 };
+  it('accepts a restaurantId or a place', () => {
+    expect(confirmedReceiptSchema.safeParse({ ...base, restaurantId: 'r1' }).success).toBe(true);
+    expect(confirmedReceiptSchema.safeParse({ ...base, place }).success).toBe(true);
+  });
+  it('rejects both or neither', () => {
+    expect(confirmedReceiptSchema.safeParse({ ...base, restaurantId: 'r1', place }).success).toBe(false);
+    expect(confirmedReceiptSchema.safeParse(base).success).toBe(false);
+  });
+  it('rejects out-of-range coordinates', () => {
+    expect(confirmedReceiptSchema.safeParse({ ...base, place: { ...place, latitude: 91 } }).success).toBe(false);
   });
 });

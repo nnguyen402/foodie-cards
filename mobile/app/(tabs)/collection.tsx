@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 import { AppText } from '@/components/ui/app-text';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { BrandHeader } from '@/components/brand-header';
 import { LockedCard } from '@/features/cards/LockedCard';
 import { RestaurantCard } from '@/features/cards/RestaurantCard';
+import { SpinCard } from '@/features/cards/SpinCard';
 import { CardBack } from '@/features/cards/reveal/CardBack';
 import { discoveryProgress } from '@/features/cards/collection';
 import { SortControl } from '@/features/cards/SortControl';
@@ -33,27 +34,26 @@ const motionStyle = {
 } as const;
 const pressedMotionStyle = { transform: [{ scale: 0.97 }] } as const;
 
+// Tapping a collected card turns it around, then opens its details once it has turned.
+const OPEN_AFTER_MS = 650;
+
 function OwnedCard({ card, width, onOpen }: { card: CardView; width: number; onOpen: () => void }) {
   const [pressed, setPressed] = useState(false);
   const reducedMotion = useReducedMotion();
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${card.restaurant.name}, ${stageLabel(card.stage)} card, ${ratingSpoken(card.rating)}. Opens card details.`}
-      onPress={onOpen}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-    >
-      <Animated.View
-        // The Pressable carries the label; hide the card's own image element from screen readers.
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={[motionStyle, pressed && !reducedMotion ? pressedMotionStyle : undefined]}
+    <Animated.View style={[motionStyle, pressed && !reducedMotion ? pressedMotionStyle : undefined]}>
+      <SpinCard
+        width={width}
+        accessibilityLabel={`${card.restaurant.name}, ${stageLabel(card.stage)} card, ${ratingSpoken(card.rating)}. Opens card details.`}
+        onAfter={onOpen}
+        afterMs={OPEN_AFTER_MS}
+        onPressIn={() => setPressed(true)}
+        onPressOut={() => setPressed(false)}
       >
         <RestaurantCard card={card} width={width} />
-      </Animated.View>
-    </Pressable>
+      </SpinCard>
+    </Animated.View>
   );
 }
 

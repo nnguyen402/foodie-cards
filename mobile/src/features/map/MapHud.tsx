@@ -85,11 +85,11 @@ export function MapHud({ discovered, total, areaLabel, collectedOnly, onToggleCo
         </View>
       ) : null}
       <View pointerEvents="box-none" className="flex-row items-center justify-between">
-        <View accessible accessibilityLabel={`Showing restaurants within 5 kilometres. ${areaLabel}`} className="flex-row items-center gap-2 rounded-full px-3.5 py-2" style={[GLASS, { flexShrink: 1 }]}>
+        <View accessible accessibilityLabel={`Showing restaurants within 3 kilometres. ${areaLabel}`} className="flex-row items-center gap-2 rounded-full px-3.5 py-2" style={[GLASS, { flexShrink: 1 }]}>
           <PinGlyph />
           <View style={{ flexShrink: 1 }}>
             <Text numberOfLines={1} className="text-sm font-bold" style={{ color: INK }}>{areaLabel}</Text>
-            <Text numberOfLines={1} className="text-xs font-medium" style={{ color: INK_MUTED }}>Within 5 km</Text>
+            <Text numberOfLines={1} className="text-xs font-medium" style={{ color: INK_MUTED }}>Within 3 km</Text>
           </View>
         </View>
         <View className="flex-row items-center gap-2">

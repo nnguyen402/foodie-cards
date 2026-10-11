@@ -3,16 +3,18 @@ import { Image, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { File } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { BrandHeader } from '@/components/brand-header';
 import { AppText } from '@/components/ui/app-text';
 import { Button } from '@/components/ui/button';
 import { MessagePanel } from '@/components/ui/message-panel';
 import { colors, radius, spacing } from '@/theme/tokens';
+import { UnlockBanner } from '@/features/map/UnlockBanner';
+import { paramsForTarget, parseUnlockParams } from '@/features/map/unlockTarget';
 import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
 import { createReceiptApi, type ReceiptImageUpload } from '@/features/receipts/receipt-api';
-import { prepareWebReceiptBlob } from '@/features/receipts/receipt-image';
+import { nativeReceiptPart, prepareWebReceiptBlob } from '@/features/receipts/receipt-image';
 import { createReceiptFlowState } from '@/features/receipts/receipt-state';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -51,7 +53,8 @@ async function prepareReceiptImage(asset: ImagePicker.ImagePickerAsset): Promise
   const file = new File(image.uri);
   if (!file.exists || file.size <= 0) throw new Error('The edited image could not be opened. Choose the receipt again.');
   if (file.size > MAX_IMAGE_BYTES) throw new Error('This receipt image is still over 10 MB after compression. Choose another photo.');
-  return { uri: image.uri, name: `receipt-${timestamp}.jpg`, type: 'image/jpeg', previewUri: image.uri };
+  const name = `receipt-${timestamp}.jpg`;
+  return { uri: image.uri, name, type: 'image/jpeg', file: nativeReceiptPart(file, name, 'image/jpeg'), previewUri: image.uri };
 }
 
 export default function ScanScreen() {
@@ -62,6 +65,7 @@ export default function ScanScreen() {
 
 function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
   const { status, session } = auth;
+  const unlockTarget = parseUnlockParams(useLocalSearchParams());
   const flow = useRef(createReceiptFlowState());
   const userId = session?.user.id ?? null;
   flow.current.transitionTo(userId);
@@ -94,7 +98,8 @@ function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
       if (!isCurrent(operation) || !flow.current.isCurrent(requestSnapshot)) return;
       const draft = await api.extractReceipt(token, image, controller.signal);
       if (!isCurrent(operation) || !flow.current.isCurrent(requestSnapshot)) return;
-      router.push({ pathname: '/receipt/confirm', params: { draftId: draft.draftId } });
+      // Hand the map's place on so the confirm screen can preselect it.
+      router.push({ pathname: '/receipt/confirm', params: { draftId: draft.draftId, ...(unlockTarget ? paramsForTarget(unlockTarget) : {}) } });
     } catch (uploadError) {
       if (controller.signal.aborted || !isCurrent(operation)) return;
       setError(uploadError instanceof Error ? uploadError.message : 'Receipt upload failed. Try again.');
@@ -167,6 +172,7 @@ function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
   return (
     <ScrollView contentInsetAdjustmentBehavior="automatic" style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <BrandHeader eyebrow="Add a visit" title="Scan a receipt" subtitle="Review every detail before a visit is added to your collection." />
+      {unlockTarget ? <UnlockBanner target={unlockTarget} /> : null}
       {error ? <MessagePanel title="Receipt not ready" body={error} kind="error" /> : null}
       {status !== 'signed-in' || !session ? (
         <MessagePanel title="Sign in to continue" body="A receipt draft is private to your account. Sign in before adding one." />

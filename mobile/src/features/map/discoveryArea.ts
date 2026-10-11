@@ -2,7 +2,7 @@ import { ATLANTA_DOWNTOWN, distanceKm, type Coordinate } from './coordinates';
 
 // The map only shows restaurants inside a fixed circle around the player. It is a search
 // boundary for the map, not a rule about which receipts can be scanned.
-export const DISCOVERY_RADIUS_METRES = 5000;
+export const DISCOVERY_RADIUS_METRES = 3000;
 
 /** How far the map's centre must drift from the discovery circle's centre before "Search this area" is offered. */
 export const SEARCH_THIS_AREA_METRES = 1000;

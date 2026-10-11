@@ -3,10 +3,11 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 import { Text } from '@/components/ui/reusables/text';
+import { Button } from '@/components/ui/button';
 import { RestaurantCard } from '../cards/RestaurantCard';
 import { stageLabel } from '../cards/stageStyles';
 import type { CardView } from '../cards/types';
-import { categoryLabel, flavourLine } from './labels';
+import { abilityLine, categoryLabel, flavourLine } from './labels';
 import { mapCardAvailability, type MapRestaurant } from './mapRestaurants';
 
 // The full card, shown over the map: our own stage frame with the restaurant's name, a
@@ -48,14 +49,15 @@ export function MapCardPopup({ restaurant, imageUrl, onScan, onViewCard, onClose
     >
       <Pressable accessibilityRole="button" accessibilityLabel="Close card" onPress={onClose} style={StyleSheet.absoluteFill} />
       <Animated.View style={[styles.content, reducedMotion ? null : { animationName: popIn, animationDuration: 260, animationTimingFunction: cubicBezier(0.23, 1, 0.32, 1), animationFillMode: 'both' }]}>
-        <RestaurantCard card={shown} width={cardWidth} uncollected={!card} heroSource={imageUrl ? { uri: imageUrl } : undefined} />
+        <RestaurantCard card={shown} width={cardWidth} uncollected={!card} cuisine={restaurant.cuisine} heroSource={imageUrl ? { uri: imageUrl } : undefined} />
         <View className="items-center gap-1" style={{ maxWidth: cardWidth + 40 }}>
           <Text className="text-sm font-bold uppercase" style={{ color: GOLD, letterSpacing: 1.5 }}>
             {categoryLabel(restaurant.category)} · {card ? stageLabel(card.stage) : 'Not collected yet'}
           </Text>
           <Text className="text-center text-base font-medium italic" style={{ color: INK }}>{flavourLine(restaurant.category)}</Text>
+          <Text className="text-center text-sm font-bold" style={{ color: GOLD }}>{abilityLine(restaurant.cuisine)}</Text>
           {availability === 'unavailable' ? (
-            <Text className="text-center text-sm font-semibold" style={{ color: INK_MUTED }}>Nearby listing only · no card is available for this restaurant.</Text>
+            <Text className="text-center text-sm font-semibold" style={{ color: INK_MUTED }}>Nearby listing only · a card can’t be created for it from a receipt yet.</Text>
           ) : null}
           {card ? (
             <Text className="text-sm font-semibold" style={{ color: INK_MUTED }}>
@@ -64,19 +66,16 @@ export function MapCardPopup({ restaurant, imageUrl, onScan, onViewCard, onClose
           ) : null}
         </View>
         <View className="flex-row gap-3" style={{ width: cardWidth + 40 }}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} className="min-h-12 flex-1 items-center justify-center rounded-2xl active:opacity-70" style={{ backgroundColor: 'rgba(246,237,226,0.14)' }}>
-            <Text className="text-base font-bold" style={{ color: INK }}>Close</Text>
-          </Pressable>
-          {availability === 'unavailable' ? null : (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={card ? `View your ${restaurant.name} card details` : `Scan a receipt from ${restaurant.name}`}
-              onPress={() => (card ? onViewCard(card.id) : onScan())}
-              className="min-h-12 flex-1 items-center justify-center rounded-2xl active:opacity-80"
-              style={{ backgroundColor: GOLD }}
-            >
-              <Text className="text-base font-extrabold" style={{ color: '#1b130b' }}>{card ? 'Card details' : 'Scan receipt'}</Text>
-            </Pressable>
+          {card ? (
+            <>
+              <View style={styles.half}><Button label="Card details" variant="secondary" onPress={() => onViewCard(card.id)} accessibilityLabel={`View your ${restaurant.name} card details`} /></View>
+              <View style={styles.half}><Button label="Log another visit" onPress={onScan} accessibilityLabel={`Log another visit to ${restaurant.name}`} /></View>
+            </>
+          ) : (
+            <>
+              <View style={styles.half}><Button label="Close" variant="secondary" onPress={onClose} /></View>
+              <View style={styles.half}><Button label="Scan receipt to unlock" onPress={onScan} accessibilityLabel={`Scan a receipt from ${restaurant.name} to unlock its card`} /></View>
+            </>
           )}
         </View>
       </Animated.View>
@@ -87,4 +86,5 @@ export function MapCardPopup({ restaurant, imageUrl, onScan, onViewCard, onClose
 const styles = StyleSheet.create({
   backdrop: { backgroundColor: 'rgba(8,5,12,0.82)', alignItems: 'center', justifyContent: 'center' },
   content: { alignItems: 'center', gap: 16 },
+  half: { flex: 1 },
 });

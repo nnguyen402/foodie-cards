@@ -2,12 +2,13 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 import { Text } from '@/components/ui/reusables/text';
-import { CuisineIcon } from '../cards/CuisineIcon';
+import { Button } from '@/components/ui/button';
+import { CuisineArt } from '../cards/CuisineArtView';
+import { cuisineColors } from '../cards/cuisineArt';
 import { stageLabel } from '../cards/stageStyles';
 import { readableTextOn } from '../cards/themes';
 import { categoryLabel } from './labels';
 import { mapCardAvailability, type MapRestaurant } from './mapRestaurants';
-import { pinLook } from './pinStyle';
 
 // The preview that slides up when a token is tapped: a dark card above the tab bar.
 // Tapping the card itself opens the full card popup.
@@ -31,7 +32,7 @@ export function RestaurantSheet({ restaurant, distance, onOpenCard, onScan, onVi
   const reducedMotion = useReducedMotion();
   const { card, theme } = restaurant;
   const availability = mapCardAvailability(restaurant);
-  const look = pinLook(card?.stage ?? null);
+  const colors = cuisineColors(restaurant.cuisine);
   const details = [categoryLabel(restaurant.category), distance].filter(Boolean).join(' · ');
   const address = [restaurant.address, restaurant.neighbourhood].filter(Boolean).join(', ');
 
@@ -50,17 +51,15 @@ export function RestaurantSheet({ restaurant, distance, onOpenCard, onScan, onVi
           onPress={onOpenCard}
           className="flex-1 flex-row items-center gap-3 active:opacity-80"
         >
-          <View className="h-16 w-16 items-center justify-center overflow-hidden rounded-2xl" style={{ backgroundColor: theme.primaryColor, borderWidth: 2, borderColor: look.ring }}>
-            <View className="h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: theme.accentColor }}>
-              <CuisineIcon kind={restaurant.icon} size={30} color={readableTextOn(theme.accentColor)} cutout={theme.accentColor} />
-            </View>
+          <View className="h-16 w-16 overflow-hidden rounded-2xl" style={{ borderWidth: 2, borderColor: colors.ring }}>
+            <CuisineArt cuisine={restaurant.cuisine} variant="thumb" locked={!card} tint={{ background: colors.fill, ink: colors.ink }} />
           </View>
           <View className="flex-1 gap-1">
             <Text numberOfLines={1} className="text-lg font-extrabold" style={{ color: INK }}>{restaurant.name}</Text>
             <Text numberOfLines={1} className="text-sm font-medium" style={{ color: INK_MUTED }}>{details}</Text>
             {address ? <Text numberOfLines={1} className="text-xs font-medium" style={{ color: INK_MUTED }}>{address}</Text> : null}
-            <View className="self-start rounded-full px-2.5 py-0.5" style={{ backgroundColor: look.fill, borderWidth: 1.5, borderColor: look.ring }}>
-              <Text className="text-xs font-bold" style={{ color: look.ink }}>{card ? stageLabel(card.stage) : 'Not collected'}</Text>
+            <View className="self-start rounded-full px-2.5 py-0.5" style={{ backgroundColor: colors.fill, borderWidth: 1.5, borderColor: colors.ring }}>
+              <Text className="text-xs font-bold" style={{ color: colors.ink }}>{card ? stageLabel(card.stage) : 'Not collected'}</Text>
             </View>
           </View>
         </Pressable>
@@ -69,17 +68,15 @@ export function RestaurantSheet({ restaurant, distance, onOpenCard, onScan, onVi
         </Pressable>
       </View>
       {availability === 'unavailable' ? (
-        <Text className="text-sm font-medium" style={{ color: INK }}>Nearby listing only — no card is available for this restaurant.</Text>
+        <Text className="text-sm font-medium" style={{ color: INK }}>Nearby listing only — a card can’t be created for it from a receipt yet.</Text>
+      ) : null}
+      {card ? (
+        <View className="gap-2">
+          <Button label="Log another visit" onPress={onScan} accessibilityLabel={`Log another visit to ${restaurant.name}`} />
+          <Button label="View card" variant="secondary" onPress={() => onViewCard(card.id)} accessibilityLabel={`View your ${restaurant.name} card`} />
+        </View>
       ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={card ? `View your ${restaurant.name} card` : `Scan a receipt from ${restaurant.name} to unlock its card`}
-          onPress={() => (card ? onViewCard(card.id) : onScan())}
-          className="min-h-14 items-center justify-center rounded-2xl px-4 active:opacity-80"
-          style={{ backgroundColor: GOLD }}
-        >
-          <Text className="text-base font-extrabold" style={{ color: '#1b130b' }}>{card ? 'View card' : 'Scan receipt'}</Text>
-        </Pressable>
+        <Button label="Scan receipt to unlock" onPress={onScan} accessibilityLabel={`Scan a receipt from ${restaurant.name} to unlock its card`} />
       )}
     </Animated.View>
   );
