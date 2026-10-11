@@ -87,6 +87,11 @@ describe('mergeNearby', () => {
     expect(merged.map((pin) => pin.name)).toEqual(['Near']);
   });
 
+  it('always keeps our own restaurants, even far outside the 3 km circle; OSM places keep the limit', () => {
+    const merged = mergeNearby([seeded('Far Seeded', 4400)], [osmPlace(1, 'Near', 500), osmPlace(2, 'Too Far', 3500)], area);
+    expect(merged.map((pin) => pin.name)).toEqual(['Far Seeded', 'Near']);
+  });
+
   it('folds an OSM duplicate into the seeded restaurant and keeps the seeded identity', () => {
     const merged = mergeNearby([seeded('Antico Pizza', 100)], [osmPlace(1, 'Antico Pizza', 160), osmPlace(2, 'Other Place', 300)], area);
     expect(merged.map((pin) => pin.id)).toEqual(['seed-Antico Pizza', 'osm:node/2']);

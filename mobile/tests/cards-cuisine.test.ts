@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CUISINE_KEYS, cuisineColors, cuisineIconFor, cuisineKeyFor, hasCuisineArt, normalizeCuisine } from '../src/features/cards/cuisineArt';
 import { cuisineIcon } from '../src/features/cards/themes';
+import { fixtureCards } from '../src/features/cards/fixtures';
 import { abilityLine } from '../src/features/map/labels';
 
 describe('normalizeCuisine (cuisine tags)', () => {
@@ -58,10 +59,10 @@ describe('cuisineKeyFor', () => {
   });
 
   it('gives no art to a fast_food place with no cuisine and no food words', () => {
-    const key = cuisineKeyFor({ name: 'The Varsity', cuisine: null, amenity: 'fast_food' });
+    const key = cuisineKeyFor({ name: 'Corner Spot', cuisine: null, amenity: 'fast_food' });
     expect(key).toBe('default');
     expect(hasCuisineArt(key)).toBe(false);
-    expect(cuisineKeyFor({ name: 'The Varsity', cuisine: 'fast_food' })).toBe('default');
+    expect(cuisineKeyFor({ name: 'Corner Spot', cuisine: 'fast_food' })).toBe('default');
   });
 
   it('maps our catalog categories the same way', () => {
@@ -92,5 +93,19 @@ describe('cuisine art files', () => {
   it('are listed only for cuisines with a committed image; the rest fall back to the drawn icon', () => {
     for (const key of ['burger', 'pizza', 'asian', 'mexican', 'dessert', 'breakfast', 'coffee', 'chicken', 'southern', 'seafood', 'steak', 'japanese'] as const) expect(hasCuisineArt(key)).toBe(true);
     for (const key of ['bbq', 'default'] as const) expect(hasCuisineArt(key)).toBe(false);
+  });
+});
+
+describe('seeded restaurants', () => {
+  it('get their cuisine from their category data alone', () => {
+    const expected: Record<string, string> = { '1': 'southern', '2': 'bbq', '3': 'southern', '4': 'burger', '5': 'pizza' };
+    const seeded = fixtureCards('discovered').map(({ restaurant }) => restaurant);
+    expect(seeded).toHaveLength(5);
+    for (const restaurant of seeded) {
+      const key = cuisineKeyFor({ name: '', cuisine: restaurant.category });
+      expect(key).toBe(expected[restaurant.id.slice(-1)]);
+      // Every seeded cuisine has an image except bbq, which still shows the drawn icon.
+      expect(hasCuisineArt(key)).toBe(key !== 'bbq');
+    }
   });
 });

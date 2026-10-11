@@ -46,11 +46,12 @@ function toPin(place: OsmPlace, owned: Map<string, MapRestaurant>): MapRestauran
 }
 
 /**
- * What the map shows for one discovery area: our own restaurants in range first, then the
- * nearest OpenStreetMap places, without duplicates, up to the cap.
+ * What the map shows: all of our own restaurants (wherever they are), then the nearest
+ * OpenStreetMap places inside the discovery area, without duplicates, up to the cap.
  */
 export function mergeNearby(catalog: MapRestaurant[], places: OsmPlace[], area: DiscoveryArea): MapRestaurant[] {
-  const ours = catalog.filter((restaurant) => inDiscoveryArea(restaurant.coordinate, area));
+  // Our own restaurants, the ones with real cards, are always on the map, whatever the radius.
+  const ours = catalog;
   const kept: OsmPlace[] = [];
   const nearestFirst = places
     .filter((place) => inDiscoveryArea(place.coordinate, area))
