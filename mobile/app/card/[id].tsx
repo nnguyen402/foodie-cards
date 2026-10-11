@@ -8,7 +8,8 @@ import { RestaurantCard } from '@/features/cards/RestaurantCard';
 import { RarityLabel, SpinCard } from '@/features/cards/SpinCard';
 import { cuisineKeyFor } from '@/features/cards/cuisineArt';
 import { abilityLine } from '@/features/map/labels';
-import { nextStageGoal, stageLabel } from '@/features/cards/stageStyles';
+import { RarityBackground } from '@/features/cards/RarityBackground';
+import { nextStageGoal, stageLabel, stageTheme } from '@/features/cards/stageStyles';
 import { ratingLabel } from '@/features/cards/themes';
 import { useCardDetail } from '@/features/cards/useCardDetail';
 import { colors, radius, spacing } from '@/theme/tokens';
@@ -50,6 +51,9 @@ export default function CardDetailScreen() {
   const [spins, setSpins] = useState(0);
   const cardWidth = Math.min(windowWidth - 2 * spacing.page, 360);
   const title = state.status === 'ready' ? state.detail.card.restaurant.name : '';
+  const ready = state.status === 'ready';
+  const stage = state.status === 'ready' ? state.detail.card.stage : 'discovered';
+  const theme = stageTheme(stage);
 
   let content;
   if (state.status === 'loading') {
@@ -76,7 +80,7 @@ export default function CardDetailScreen() {
         </View>
         <View style={styles.rarity}>
           <RarityLabel stage={card.stage} playKey={spins} />
-          <AppText variant="small" muted>{abilityLine(cuisineKeyFor({ name: card.restaurant.name, cuisine: card.restaurant.category }))}</AppText>
+          <AppText variant="small" style={styles.onDarkMuted}>{abilityLine(cuisineKeyFor({ name: card.restaurant.name, cuisine: card.restaurant.category }))}</AppText>
         </View>
 
         <Section title="Progress">
@@ -136,22 +140,32 @@ export default function CardDetailScreen() {
   }
 
   return (
-    <>
-      <Stack.Screen options={{ title }} />
-      <ScrollView contentInsetAdjustmentBehavior="automatic" style={styles.screen} contentContainerStyle={styles.content}>
+    <View style={[styles.screen, { backgroundColor: ready ? theme.shades[0] : colors.canvas }]}>
+      {/* A loaded card gets its rarity's darkest shade in the header, so no white bar sits over the background. */}
+      <Stack.Screen
+        options={
+          ready
+            ? { title, headerStyle: { backgroundColor: theme.shades[0] }, headerTintColor: theme.label, headerTitleStyle: { color: theme.label }, headerShadowVisible: false, statusBarStyle: 'light' }
+            : { title }
+        }
+      />
+      {ready ? <RarityBackground stage={stage} /> : null}
+      <ScrollView contentInsetAdjustmentBehavior="automatic" style={styles.scroll} contentContainerStyle={styles.content}>
         {content}
       </ScrollView>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.canvas },
+  screen: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: spacing.page, paddingBottom: spacing.xxl, gap: spacing.xl },
   cardWrap: { alignItems: 'center' },
   rarity: { alignItems: 'center', gap: 2 },
+  onDarkMuted: { color: '#d6cdc2', textAlign: 'center' },
   section: { gap: spacing.sm },
-  sectionTitle: { paddingHorizontal: spacing.lg },
+  sectionTitle: { paddingHorizontal: spacing.lg, color: '#d6cdc2' },
   group: { backgroundColor: colors.surface, borderRadius: radius.control, overflow: 'hidden' },
   row: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.xs },
   rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
