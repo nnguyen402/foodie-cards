@@ -24,7 +24,7 @@ export default function IndexRoute() {
       </View>
     );
   }
-  return <Redirect href={status === 'signed-in' ? '/(tabs)/collection' : '/(auth)/sign-in'} />;
+  return <Redirect href={status === 'signed-in' ? '/(tabs)/map' : '/(auth)/sign-in'} />;
 }
 
 const styles = StyleSheet.create({

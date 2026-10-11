@@ -1,4 +1,26 @@
-# Foundation checkpoint — 2026-10-10
+# Project checkpoint — 2026-10-10
+
+## Integrated A/B/C checkpoint (October 11, 2026)
+
+The progression, receipt scanning, and cards/map/reveal PRs are integrated together. Both receipt extraction and acceptance routes are registered; confirmation opens awarded reveals, and reveal labels consume the backend's ordered stage awards. Camera and location plugins are both retained. The sections below are historical lane checkpoints and do not describe the current integration state.
+
+Verification includes the combined Vitest suite, shared/server/mobile typechecking, Expo Doctor, exports, 164 local SQL assertions, five concurrency probes, and the local Auth/PostgREST/HTTP probe. That HTTP probe now exercises multipart upload through real private storage and owned draft reload before acceptance; only its AI output is synthetic. Earlier receipt verification used three real photos with live Gemini.
+
+Deployment still requires the committed receipt draft migration on the target database, phone-reachable backend configuration, and physical-phone QA. This integration does not deploy hosted changes. OpenStreetMap-only places remain browsing entries; they cannot create restaurant cards through the supported-catalog receipt API.
+
+## Historical Lane A checkpoint
+
+Work is on `feat/lane-a-progression`; push this branch only and open a PR to `main` later. The project owner owns A, one teammate owns B+C, and another owns D. Replit is excluded. Use the existing checkout and ignored credentials. The historical foundation notes below describe the earlier checkpoint; this section supersedes their pending-work statements.
+
+Implemented in A: authenticated receipt submission, server-owned draft validation, canonical item resolution, atomic receipt/visit/item/card progression, global hash/fingerprint duplicate protection, persisted exact retry results, every crossed stage award, badge/title evaluation, transactional reviews, profile edits, atomic owned pins, unlocked title equipment, and pending/idempotently viewed reveal APIs. Incomplete extraction fields may be null only while a receipt is a draft. Earlier interrupted milestone reveals survive later evolution.
+
+Verification: 57 JavaScript tests across eight files; root build/typecheck; all 159 SQL checks across four files; five real concurrent-session checks; real local Supabase Auth/PostgREST/HTTP integration for receipt ownership/scoring/replay, reviews, profile actions, and reveal recovery. Synthetic accounts/images are cleaned up. Independent final review found no remaining material findings. No mobile files or dependencies were changed, so prior Expo validation is historical rather than a new physical-device claim.
+
+The new migrations are `20261010000200_foodie_cards_progression.sql` and `20261010000300_foodie_cards_profile_actions.sql`; both are applied to the local QA database and authorized hosted project, with migration history aligned. Hosted application used the exact reviewed files in one atomic transaction after verifying only the foundation migration existed and no non-draft legacy receipts required compatibility changes. Hosted history records 00100/00200/00300 with 76/13/9 statements. All six exposed RPCs deny anon/authenticated execution and permit service_role. No hosted users or Auth settings were changed; authenticated two-user hosted behavior still needs QA. Never reset hosted data.
+
+Read [Lane A interfaces and integration instructions](lane-a-handoff.md) first. B+C should persist owned, hashed extraction drafts and call acceptance/reveal APIs. D should call A's review/profile APIs and own mobile presentation. Remaining gates: B's real Gemini extraction and confirmation integration, C/D mobile screens, physical iPhone auth/session/recovery/privacy QA, and a phone-reachable backend. Public hosting is optional until needed; do not create Replit.
+
+Lane A ignored execution ledger and reports live in `.superpowers/sdd/2026-10-10-lane-a-progression/`. The [Lane A implementation plan](superpowers/plans/2026-10-10-lane-a-progression.md), PRD, shared contracts, committed SQL migrations, and tests are the authoritative references for fresh agents.
 
 ## Resume here
 
@@ -31,7 +53,7 @@ The authorized hosted project is `hacklanta_2`, ref `pceralaksbvhilxxyjbs`, regi
 
 Hosted setup completed: the committed migration was applied atomically through the authorized Management API query endpoint, recording exact CLI-compatible version `20261010000100`, name `foodie_cards_foundation`, and 76 parsed statements. The four seed statements were applied without a seed migration row. The setup agent verified 15 application tables with RLS, 18 policies, catalog counts of 5 restaurants/15 menu items/8 badges/8 titles, and a private receipts bucket. Anonymous catalog REST returned 200; anonymous profiles/receipts REST returned 401. Migration metadata is inaccessible to anon/authenticated. Storage has four authenticated owner-folder policies and no anonymous policies; its ACL includes inherited SELECT, so privacy depends on RLS and the private bucket. Real authenticated two-user hosted tests remain pending. No hosted users or auth settings were changed.
 
-The local Supabase stack and Docker were left running for QA. The integrator's Metro preview and tester's temporary backend were stopped. Start the backend with `npm run server` and Metro with `npm run mobile`; confirm the phone's backend URL matches the current computer LAN address. No Replit deployment exists yet.
+The local Supabase stack and Docker were left running for QA. The integrator's Metro preview and tester's temporary backend were stopped. Start the backend with `npm run server` and Metro with `npm run mobile`; confirm the phone's backend URL matches the current computer LAN address. Replit is excluded from this workflow; no public backend deployment exists yet.
 
 ## Next required work
 

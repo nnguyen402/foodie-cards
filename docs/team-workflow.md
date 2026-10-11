@@ -4,7 +4,7 @@ Start with the [product requirements document](PRD.md) for the product goal, dem
 
 ## Foundation first
 
-One coordinating Codex agent supervised by A builds Task 1 plus shared interfaces and labeled fixtures before parallel feature implementation. Extend an existing Replit scaffold, or scaffold directly in this repository while preserving Replit backend hosting.
+One coordinating Codex agent supervised by A builds Task 1 plus shared interfaces and labeled fixtures before parallel feature implementation. Extend the existing scaffold in this repository; use local development and a phone-reachable backend.
 
 The handoff includes runnable mobile/backend scripts, auth and session persistence, profile/schema/RLS/private storage, route shells, agreed contracts for profile edits/pins/title equipment/reviews/reveal acknowledgement, representative fixtures, setup instructions, and physical-phone verification. Report outstanding credentials or phone checks honestly. Later feature endpoints need not be implemented yet.
 
@@ -17,11 +17,13 @@ Stop at the committed foundation handoff, then give teammates substantial featur
 | A: foundation/integration | Scaffold, auth, shared contracts, migrations/RLS, transactional progression and review awards, deployment | Authenticated acceptance awards progress exactly once |
 | B: receipts/AI | Capture/upload UI, Gemini extraction, item normalization, editable confirmation | Real receipt becomes a valid editable draft |
 | C: cards/visuals | Prepared assets, themes, reusable card, collection/detail, sorting, reveals and recovery | Contract-shaped milestone opens on the demo phone |
-| D: profile/sharing | Profile, reviews UI/routes, pins, titles UI, public previews, native sharing, demo preparation | Profile shows reviews, owned pins, and equipped title |
+| D: profile/sharing | Profile, reviews mobile UI, pins, titles UI, public previews, native sharing, demo preparation | Profile shows reviews, owned pins, and equipped title |
 
 A owns account award logic for both receipts and reviews. D's review route calls the transactional database function rather than independently calculating rewards.
 
 ## Assignments to start now
+
+Current team split: **A is the project owner**, **one teammate owns B + C together**, and **one teammate owns D**. The four lanes below describe responsibilities; they do not require four people. The B+C owner builds receipt capture/extraction/confirmation and the card/collection/reveal experience together. A supplies acceptance and rewards; D supplies profile/review presentation.
 
 The committed foundation is ready for parallel feature work: app shells, shared contracts and labeled fixtures, authenticated backend, hosted Supabase schema, and private storage are implemented. Read [the checkpoint handoff](checkpoint-handoff.md) for verification evidence and unresolved checks. Branch from the latest `main`; do not rebuild the scaffold. Lane letters are roles, not assigned teammate names.
 
@@ -29,7 +31,7 @@ The committed foundation is ready for parallel feature work: app shells, shared 
 |---|---|---|---|
 | B: receipts/Gemini teammate | Task 2: capture/library upload, private draft handling, server-side Gemini extraction and normalization, editable confirmation | Three real receipt samples produce editable drafts; uncertain items remain flagged; retry/error states preserve edits | Own receipt extraction/normalization and receipt UI. No XP awards. A owns submission/acceptance. Verify configured Gemini access without exposing keys. |
 | C: cards/visuals teammate | Task 4: permissioned assets, five restaurant themes, one card layout with three stage treatments, collection/detail, reveal | Labeled fixtures demonstrate first unlock and evolution with skip/reduced-motion support on the iPhone | Own card features/assets and collection/detail/reveal screens. Connect persisted rewards after A's acceptance endpoint; coordinate review-editor placement with D. |
-| D: profile teammate | Task 5 UI: profile, rating/review editor, owned pins, badges, unlocked-title selection | Contract-shaped profile/editor states work with labeled fixtures, including zero-star versus unrated and save failures | Own profile features/screens and review UI. Coordinate card-detail edits with C. A supplies transactional review awards; sharing/public previews are a later increment after the receipt-to-card loop. |
+| D: profile teammate | Task 5 UI: profile, rating/review editor, owned pins, badges, unlocked-title selection | Contract-shaped profile/editor states work with labeled fixtures, including zero-star versus unrated and save failures | Own profile features/screens and review UI. A owns server profile/review routes and adapters. Coordinate card-detail edits with C. A supplies transactional review awards; sharing/public previews are a later increment after the receipt-to-card loop. |
 | A: user + integration coordinator | Task 3: atomic/idempotent acceptance, duplicate protection, server-side progression; phone-reachable backend deployment | An accepted receipt persists a card and correct XP exactly once; replay, cross-account duplicates, and concurrent submissions are tested | Own shared contracts, migrations, root dependencies/lockfile, receipt submission, receipt/review award logic, and integration. |
 
 Assign one person the remaining foundation QA immediately: real iPhone signup/email confirmation/sign-in, relaunch/session restoration, sign-out/account switch, empty collection, backend connectivity, and authenticated two-user private-data/storage isolation. Record evidence and failures in the checkpoint handoff. Feature work can proceed against contracts/fixtures while this runs; live integration depends on resolving failures.
@@ -47,6 +49,8 @@ If only two feature teammates are available, assign B and C first. A retains int
 5. Assign people to lanes and choose the physical demo phone.
 
 ## Agent workflow
+
+UI teammates should update their branches from main and follow [the shared mobile UI foundation](ui-foundation.md). React Native Reusables, styling configuration, and shared controls are configured once by the integrator. B+C and D use those controls rather than independently initializing or replacing the styling stack. Keep Task A backend work in its separate PR.
 
 - Each teammate uses a separate checkout or worktree and a lane branch.
 - Each teammate's main agent coordinates their subagents and reviews the combined result.

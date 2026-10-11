@@ -15,12 +15,13 @@ Set these in the matching app environment. Do not commit `.env` files or real ke
 | Server | `SUPABASE_SERVICE_ROLE_KEY` | The project service-role key; keep it in backend secrets only |
 | Server | `GEMINI_API_KEY` | Gemini API key; keep it in backend secrets only |
 | Server | `GEMINI_MODEL` | The image-capable Gemini model selected for the project |
+| Server | `GEMINI_THINKING_LEVEL` | Optional Gemini 3 Flash setting: `low` (default), `medium`, or `high`; omitted from requests to other models |
 
 For local phone development, `EXPO_PUBLIC_API_URL` must use the development computer's LAN address and the backend port, such as `http://192.168.1.20:3000`. A phone cannot reach the development computer through `localhost`. Both devices need network access to that address. For a device using Expo Go against a hosted backend, use the deployed HTTPS backend URL instead.
 
 ## Supabase project and schema
 
-Create a Supabase project and set up its Auth email/password provider. This repository does not include credentials or a hosted project. The initial migration creates the private tables, Row Level Security policies, the `receipts` private Storage bucket, and signup profile trigger. `supabase/seed.sql` adds five curated Atlanta locations and a small menu catalog; menu entries are examples for matching, not live menu or price data. No receipt history, reviews, or XP are seeded.
+Create a Supabase project and set up its Auth email/password provider. Credentials are kept in ignored local files; the configured hosted project and verification status are recorded in the checkpoint handoff. The initial migration creates the private tables, Row Level Security policies, the `receipts` private Storage bucket, and signup profile trigger. `supabase/seed.sql` adds five curated Atlanta locations and a small menu catalog; menu entries are examples for matching, not live menu or price data. No receipt history, reviews, or XP are seeded.
 
 Install the Supabase CLI using the official install method for your development machine. To reproduce the database locally, run a Docker-compatible container runtime, then from the repository root:
 
@@ -45,21 +46,31 @@ npx supabase db push --include-seed
 
 The linked operation applies local migrations and the configured seed file to that project. Keep the database password and access tokens out of the repository. The SQL tests are written for the local Supabase database; do not run the test suite against production user data.
 
-Each auth signup inserts a private `profiles` row with `display_name = 'Foodie'`, `account_xp = 0`, and a bundled `avatar_key` (default `fork`). The mobile builder should use `profiles.id` as the signed-in user ID and derive `accountLevel = 1 + floor(accountXP / 200)`. The table uses snake_case fields: `account_xp`, `equipped_title_key`, `display_name`, `avatar_key`. Clients can edit only display name and avatar. Receipt acceptance/review awards and title equipment need backend-owned transactional logic; those RPCs are intentionally not part of the foundation migration.
+Each auth signup inserts a private `profiles` row with `display_name = 'Foodie'`, `account_xp = 0`, and a bundled `avatar_key` (default `fork`). The mobile builder should use `profiles.id` as the signed-in user ID and derive `accountLevel = 1 + floor(accountXP / 200)`. The table uses snake_case fields: `account_xp`, `equipped_title_key`, `display_name`, `avatar_key`. Clients can edit only display name and avatar. The foundation migration does not contain reward RPCs; subsequent Lane A migrations add receipt acceptance, review awards, and profile/title actions. See the Lane A handoff for endpoint contracts and rollout status.
 
 Receipt storage paths must start with the owning user's UUID, for example `<user-uuid>/<receipt-id>.jpg`. The bucket is private and Storage policies check that first folder against `auth.uid()`. Do not put receipt images, totals, receipt numbers, or paths into public profile views.
 
 ## Mobile development and iPhone QA
 
+### Receipt scanning
+
+The signed-in scan screen accepts a camera photo or photo-library image, converts it to JPEG, and uploads it to `POST /api/receipts/extract`. The server validates the image, reads it with Gemini, and saves an editable draft and image privately under the signed-in user. `GET /api/receipts/drafts/:draftId` restores that user's draft; `GET /api/receipts/restaurants` supplies supported locations. Extraction does not award XP.
+
+Apply `20261011000100_receipt_draft_fields.sql` before using this flow. It allows unreadable fields to stay empty while a receipt is a draft and requires complete fields once it leaves draft status. This change is delivered as a migration; testing the branch does not deploy it to a hosted project.
+
+Gemini requests allow 30 seconds per attempt and one retry. Gemini 3 Flash uses low thinking by default to keep receipt extraction within that budget. The confirmation screen submits to the integrated `/api/receipts/submit` endpoint and offers a card reveal when acceptance awards a stage. Retryable failures preserve edits. JSON confirmation requests are bounded to 512 KiB, separate from the 10 MiB multipart image limit.
+
+Receipt extraction was tested with three supplied photos using the configured Gemini model. Physical-phone QA is still required for camera permission, library selection, image conversion, upload over the phone's network, account switching, and confirmation with Lane A integrated.
+
 Install the root workspace dependencies using the repository's package manager, then start Expo using the script documented in the root `package.json` (currently owned by the foundation scaffold). Open its QR code with Expo Go on the demo iPhone. The phone and development computer need to share a network that allows local device traffic. Configure the Supabase URL/key and LAN-accessible API URL in the mobile environment before launching.
 
 Physical-phone verification is still outstanding: test email/password signup, session persistence after closing and reopening Expo Go, sign-out, account switching without stale collection data, and a request to the backend health endpoint. Expo Go availability and installation rules can differ by iOS version and account. If Expo Go cannot install or reach the app, use the team's configured development build path and record the actual result; do not treat simulator checks as phone verification.
 
-## Backend on Replit
+## Backend access and deployment
 
-Create a Replit Node.js project connected to this repository and configure the four server variables above in Replit Secrets. Publish the Express server and set the mobile `EXPO_PUBLIC_API_URL` to its public HTTPS URL. Keep `SUPABASE_SERVICE_ROLE_KEY` and `GEMINI_API_KEY` server-side. Apply schema changes through committed Supabase migrations, not dashboard-only table edits. Confirm the published backend health endpoint from a second device; an editor-only process is not a deployment.
+Run the existing Express backend with `npm run server`. For the iPhone demo on the same network, set `EXPO_PUBLIC_API_URL` to the computer's reachable LAN address and port. Replit is excluded from this project workflow. If a public demo endpoint is needed later, deploy this same backend to the team's chosen Node.js host and use its HTTPS URL. Keep `SUPABASE_SERVICE_ROLE_KEY` and `GEMINI_API_KEY` server-side. Apply schema changes through committed Supabase migrations, not dashboard-only table edits. Confirm backend health from the phone; a local process is not a public deployment.
 
-Remaining live setup includes creating/linking the Supabase project, configuring Auth email settings and redirect URLs, applying the migration/seed, setting Replit secrets, publishing the backend, adding mobile environment values, and completing the physical iPhone smoke test.
+The hosted Supabase foundation and ignored local environment files are configured; see the checkpoint handoff for verification. Remaining live checks include Auth email/redirect behavior, current feature migration rollout, phone/backend connectivity, and the physical iPhone smoke test. Public backend deployment is a separate optional hosting decision; do not create a Replit project.
 
 ## Curated catalog sources
 

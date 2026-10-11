@@ -1,7 +1,9 @@
 {
   "name": "foodie-cards",
   "private": true,
-  "engines": { "node": ">=22.6.0" },
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "workspaces": [
     "shared",
     "server",
@@ -16,12 +18,13 @@
     "build": "npm run typecheck"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^26.6.5",
+    "@types/supertest": "^7.2.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native-reanimated": "4.5.1",
-    "@types/express": "^5.0.6",
-    "@types/node": "^26.6.5",
-    "@types/supertest": "^7.2.1",
     "supertest": "^7.3.1",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",

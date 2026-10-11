@@ -6,7 +6,19 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "plugins": ["expo-router"],
+    "web": { "bundler": "metro" },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a receipt photo to review your purchases.",
+          "cameraPermission": "Take a receipt photo to review your purchases.",
+          "microphonePermission": false
+        }
+      ],
+      ["expo-location", { "locationWhenInUsePermission": "Foodie Cards uses your location to centre the map on restaurants near you." }]
+    ],
     "experiments": {
       "typedRoutes": true
     },

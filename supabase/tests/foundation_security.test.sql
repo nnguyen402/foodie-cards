@@ -17,11 +17,12 @@ values
 
 insert into public.receipts (
   id, user_id, restaurant_id, receipt_date, total_minor, currency,
-  image_path, image_hash, fingerprint, status
+  image_path, image_hash, fingerprint, status, acceptance_result, submission_id
 ) values (
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '11111111-1111-4111-8111-111111111111',
   '10000000-0000-4000-8000-000000000001', current_date, 1200, 'USD',
-  '11111111-1111-4111-8111-111111111111/receipt.jpg', repeat('a', 64), repeat('b', 64), 'accepted'
+  '11111111-1111-4111-8111-111111111111/receipt.jpg', repeat('a', 64), repeat('b', 64), 'accepted', '{}'::jsonb,
+  'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 );
 insert into storage.objects (bucket_id, name)
 values ('receipts', '11111111-1111-4111-8111-111111111111/receipt.jpg');
