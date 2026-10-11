@@ -85,6 +85,10 @@ export function cuisineColors(key: CuisineKey): CuisineColors {
 // Illustrations that exist in mobile/assets/cuisine/. Add a line when a file is committed.
 // Loaders, not values, so the images are only required where the app (Metro) asks for them.
 const ART: Partial<Record<CuisineKey, () => ImageSourcePropType>> = {
+  pizza: () => require('../../../assets/cuisine/pizza.png'),
+  asian: () => require('../../../assets/cuisine/asian.png'),
+  breakfast: () => require('../../../assets/cuisine/breakfast.png'),
+  coffee: () => require('../../../assets/cuisine/coffee.png'),
   chicken: () => require('../../../assets/cuisine/chicken.png'),
   southern: () => require('../../../assets/cuisine/southern.png'),
   seafood: () => require('../../../assets/cuisine/seafood.png'),

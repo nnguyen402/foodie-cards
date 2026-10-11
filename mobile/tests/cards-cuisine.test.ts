@@ -52,7 +52,7 @@ describe('cuisine art, colours and abilities', () => {
 
 describe('cuisine art files', () => {
   it('are listed only for cuisines with a committed image; the rest fall back to the drawn icon', () => {
-    for (const key of ['chicken', 'southern', 'seafood'] as const) expect(hasCuisineArt(key)).toBe(true);
-    for (const key of ['burger', 'dessert', 'default'] as const) expect(hasCuisineArt(key)).toBe(false);
+    for (const key of ['pizza', 'asian', 'breakfast', 'coffee', 'chicken', 'southern', 'seafood'] as const) expect(hasCuisineArt(key)).toBe(true);
+    for (const key of ['burger', 'mexican', 'bbq', 'dessert', 'default'] as const) expect(hasCuisineArt(key)).toBe(false);
   });
 });
