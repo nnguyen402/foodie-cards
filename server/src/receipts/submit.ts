@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { confirmedReceiptSchema, type ConfirmedReceipt } from '@foodie-cards/shared';
+import { confirmedReceiptBaseSchema, type ConfirmedReceipt } from '@foodie-cards/shared';
 import type { ReceiptMenuItem } from '../auth.js';
 
 export const uuidSchema = z.string().uuid();
@@ -9,7 +9,7 @@ const receiptItemSubmissionSchema = z.object({
   quantity: z.number().int().min(1).max(99),
 }).strict();
 
-export const safeConfirmedReceiptSchema = confirmedReceiptSchema.extend({
+export const safeConfirmedReceiptSchema = confirmedReceiptBaseSchema.omit({ place: true }).extend({
   draftId: uuidSchema,
   submissionId: uuidSchema,
   restaurantId: uuidSchema,

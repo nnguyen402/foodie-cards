@@ -112,6 +112,18 @@ describe('buildMapRestaurants', () => {
     expect(pin).toMatchObject({ neighbourhood: 'Downtown', address: '61 North Ave NW', icon: 'plate', cuisine: 'default', category: 'fast_food', theme });
   });
 
+  it('uses a stored brand key and its own coordinate when the place has them', () => {
+    const stored = { ...place('stored-1', 'Some Chain', 'burger'), brandKey: 'wikidata:Q1', latitude: 33.75, longitude: -84.39 };
+    const [pin] = buildMapRestaurants({ owned: [], locked: [stored] });
+    expect(pin.brandKey).toBe('wikidata:Q1');
+    expect(pin.coordinate).toEqual({ latitude: 33.75, longitude: -84.39 });
+  });
+
+  it('falls back to a name brand key without a stored one', () => {
+    const [pin] = buildMapRestaurants({ owned: [], locked: [{ ...place('stored-2', 'The Varsity', 'fast_food'), latitude: 33.77, longitude: -84.39, brandKey: null }] });
+    expect(pin.brandKey).toBe('name:varsity');
+  });
+
   it('leaves out restaurants without coordinates', () => {
     expect(buildMapRestaurants({ owned: [], locked: [place('no-coordinates', 'Mystery')] })).toEqual([]);
   });

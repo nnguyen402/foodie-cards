@@ -62,3 +62,19 @@ describe('shared API contracts', () => {
     }).success).toBe(false);
   });
 });
+
+describe('confirmed receipt place', () => {
+  const base = { draftId: 'd', submissionId: 's', receiptDate: '2026-10-11', receiptNumber: null, totalMinor: 1000, currency: 'USD', items: [{ originalText: 'x', confirmedName: 'x', quantity: 1 }] };
+  const place = { osmType: 'node', osmId: 42, name: 'Chick-fil-A', brandKey: 'name:chick fil a', cuisine: 'chicken', latitude: 33.7, longitude: -84.4 };
+  it('accepts a restaurantId or a place', () => {
+    expect(confirmedReceiptSchema.safeParse({ ...base, restaurantId: 'r1' }).success).toBe(true);
+    expect(confirmedReceiptSchema.safeParse({ ...base, place }).success).toBe(true);
+  });
+  it('rejects both or neither', () => {
+    expect(confirmedReceiptSchema.safeParse({ ...base, restaurantId: 'r1', place }).success).toBe(false);
+    expect(confirmedReceiptSchema.safeParse(base).success).toBe(false);
+  });
+  it('rejects out-of-range coordinates', () => {
+    expect(confirmedReceiptSchema.safeParse({ ...base, place: { ...place, latitude: 91 } }).success).toBe(false);
+  });
+});

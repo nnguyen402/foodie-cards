@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { MessagePanel } from '@/components/ui/message-panel';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { UnlockBanner } from '@/features/map/UnlockBanner';
-import { parseUnlockParams } from '@/features/map/unlockTarget';
+import { paramsForTarget, parseUnlockParams } from '@/features/map/unlockTarget';
 import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
 import { createReceiptApi, type ReceiptImageUpload } from '@/features/receipts/receipt-api';
@@ -98,7 +98,8 @@ function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
       if (!isCurrent(operation) || !flow.current.isCurrent(requestSnapshot)) return;
       const draft = await api.extractReceipt(token, image, controller.signal);
       if (!isCurrent(operation) || !flow.current.isCurrent(requestSnapshot)) return;
-      router.push({ pathname: '/receipt/confirm', params: { draftId: draft.draftId } });
+      // Hand the map's place on so the confirm screen can preselect it.
+      router.push({ pathname: '/receipt/confirm', params: { draftId: draft.draftId, ...(unlockTarget ? paramsForTarget(unlockTarget) : {}) } });
     } catch (uploadError) {
       if (controller.signal.aborted || !isCurrent(operation)) return;
       setError(uploadError instanceof Error ? uploadError.message : 'Receipt upload failed. Try again.');

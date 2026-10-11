@@ -65,16 +65,30 @@ export const receiptRestaurantSchema = z.object({
 export type ReceiptRestaurant = z.infer<typeof receiptRestaurantSchema>;
 export const receiptRestaurantsResponseSchema = z.object({ restaurants: z.array(receiptRestaurantSchema) });
 
-export const confirmedReceiptSchema = z.object({
+export const placeSchema = z.object({
+  osmType: z.enum(['node', 'way', 'relation']),
+  osmId: z.number().int().positive(),
+  name: z.string().trim().min(1).max(200),
+  address: z.string().max(300).optional(),
+  brandKey: z.string().max(200).optional(),
+  cuisine: z.string().max(80).optional(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+export type Place = z.infer<typeof placeSchema>;
+
+export const confirmedReceiptBaseSchema = z.object({
   draftId: z.string().min(1),
   submissionId: z.string().min(1),
-  restaurantId: z.string().min(1),
+  restaurantId: z.string().min(1).optional(),
+  place: placeSchema.optional(),
   receiptDate: calendarDate,
   receiptNumber: z.string().nullable(),
   totalMinor: z.number().int().nonnegative(),
   currency: z.string().regex(/^[A-Z]{3}$/),
   items: z.array(receiptItemConfirmedSchema).min(1),
 });
+export const confirmedReceiptSchema = confirmedReceiptBaseSchema.refine((value) => (value.restaurantId === undefined) !== (value.place === undefined), { message: 'Send exactly one of restaurantId or place.' });
 export type ConfirmedReceipt = z.infer<typeof confirmedReceiptSchema>;
 
 export const progressionResultSchema = z.object({

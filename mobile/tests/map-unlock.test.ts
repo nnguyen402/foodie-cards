@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MapRestaurant } from '../src/features/map/mapRestaurants';
-import { parseUnlockParams, unlockParams } from '../src/features/map/unlockTarget';
+import { paramsForTarget, parseUnlockParams, unlockParams } from '../src/features/map/unlockTarget';
 
 const theme = { primaryColor: '#000000', accentColor: '#ffffff', fontKey: 'bold', patternKey: 'none' } as MapRestaurant['theme'];
 const base = { brandKey: 'name:x', cuisine: 'default', icon: 'plate', category: 'x', theme, coordinate: { latitude: 1, longitude: 2 }, neighbourhood: 'Midtown', address: '1 Main St' } as const;
@@ -25,6 +25,13 @@ describe('unlock params', () => {
   it('round-trips through the Scan screen parser', () => {
     expect(parseUnlockParams(unlockParams(seeded))).toEqual({ name: 'Antico Pizza', restaurantId: 'rest-1', address: '1 Main St, Midtown', osm: undefined, visit: false });
     expect(parseUnlockParams(unlockParams(nearby))).toMatchObject({ name: 'Corner Cafe', restaurantId: undefined, osm: 'node/42' });
+  });
+
+  it('Scan forwards exactly the params it was given on to the confirm screen', () => {
+    for (const restaurant of [seeded, nearby, { ...seeded, card: { id: 'c' } as MapRestaurant['card'] }]) {
+      const params = unlockParams(restaurant);
+      expect(paramsForTarget(parseUnlockParams(params)!)).toEqual(params);
+    }
   });
 
   it('shows nothing when the Scan tab is opened on its own', () => {

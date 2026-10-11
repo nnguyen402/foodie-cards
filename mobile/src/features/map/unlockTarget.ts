@@ -27,7 +27,17 @@ export function unlockParams(restaurant: MapRestaurant): Record<string, string> 
   return params;
 }
 
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) || undefined;
+/** The route params for a parsed target, so Scan can hand the same place on to the confirm screen. */
+export function paramsForTarget(target: UnlockTarget): Record<string, string> {
+  const params: Record<string, string> = { unlockName: target.name };
+  if (target.address) params.unlockAddress = target.address;
+  if (target.restaurantId) params.unlockId = target.restaurantId;
+  if (target.osm) params.unlockOsm = target.osm;
+  if (target.visit) params.unlockVisit = '1';
+  return params;
+}
+
+const first =(value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) || undefined;
 
 export function parseUnlockParams(params: Params): UnlockTarget | null {
   const name = first(params.unlockName);

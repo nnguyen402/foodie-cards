@@ -96,6 +96,30 @@ describe('receipt API', () => {
     expect(new Headers(fetcher.mock.calls[0][1]?.headers).get('Authorization')).toBe('Bearer fresh-access-token');
   });
 
+  it('submits a place without a restaurantId and still rejects an invalid restaurantId', async () => {
+    const placeConfirmed = {
+      draftId: draftUuid, submissionId: '10000000-0000-4000-8000-000000000001',
+      place: { osmType: 'node' as const, osmId: 42, name: 'Chick-fil-A', latitude: 33.7, longitude: -84.4 },
+      receiptDate: '2026-10-11', receiptNumber: null,
+      totalMinor: 1250, currency: 'USD',
+      items: [{ originalText: 'Latte', confirmedName: 'Latte', quantity: 1 }],
+    };
+    const fetcher = mockFetch().mockResolvedValue(jsonResponse(progression));
+    const api = createReceiptApi({ baseUrl: 'https://api.example.test', fetcher });
+
+    await expect(api.submitReceipt('token', placeConfirmed)).resolves.toEqual(progression);
+    expect(fetcher.mock.calls[0][0]).toBe('https://api.example.test/api/receipts/submit');
+
+    let thrown: unknown;
+    try {
+      api.submitReceipt('token', { ...placeConfirmed, place: undefined, restaurantId: 'not-a-uuid' });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({ name: 'ReceiptApiError', code: 'INVALID_RECEIPT' });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it('preserves structured API error details for retry decisions', async () => {
     const fetcher = mockFetch().mockResolvedValue(jsonResponse({
       code: 'AI_UNAVAILABLE', message: 'Reader timed out.', retryable: true,

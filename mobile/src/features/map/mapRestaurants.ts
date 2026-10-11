@@ -38,14 +38,14 @@ export function mapCardAvailability(pin: Pick<MapRestaurant, 'source' | 'card'>)
   return pin.source === 'catalog' ? 'scan' : 'unavailable';
 }
 
-type Place = CardView['restaurant'] & { latitude?: number | null; longitude?: number | null };
+type Place = CardView['restaurant'] & { latitude?: number | null; longitude?: number | null; brandKey?: string | null };
 
 function toPin(place: Place, card: MapRestaurant['card']): MapRestaurant | null {
   const coordinate = coordinateFor(place);
   if (!coordinate) return null;
   const [neighbourhood, address = ''] = place.locationLabel.split(' · ');
   const cuisine = cuisineKeyFor({ name: place.name, cuisine: place.category });
-  return { id: place.id, source: 'catalog', osm: null, name: place.name, brandKey: `name:${normalizedName(place.name)}`, neighbourhood, address, category: place.category, cuisine, icon: cuisineIconFor(cuisine), theme: place.theme, coordinate, card };
+  return { id: place.id, source: 'catalog', osm: null, name: place.name, brandKey: place.brandKey ?? `name:${normalizedName(place.name)}`, neighbourhood, address, category: place.category, cuisine, icon: cuisineIconFor(cuisine), theme: place.theme, coordinate, card };
 }
 
 /** Every restaurant we can place on the map, collected or not, in name order. */
