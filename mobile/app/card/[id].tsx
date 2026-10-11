@@ -10,7 +10,7 @@ import { RarityLabel, SpinCard } from '@/features/cards/SpinCard';
 import { cuisineKeyFor } from '@/features/cards/cuisineArt';
 import { abilityLine } from '@/features/map/labels';
 import { RarityBackground } from '@/features/cards/RarityBackground';
-import { nextStageGoal, stageLabel, stageTheme } from '@/features/cards/stageStyles';
+import { DETAIL_BACKGROUND, nextStageGoal, stageLabel, stageTheme } from '@/features/cards/stageStyles';
 import { ratingLabel } from '@/features/cards/themes';
 import { useCardDetail } from '@/features/cards/useCardDetail';
 import { colors, radius, spacing } from '@/theme/tokens';
@@ -141,12 +141,12 @@ export default function CardDetailScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: ready ? theme.shades[0] : colors.canvas }]}>
-      {/* A loaded card gets its rarity's darkest shade in the header, so no white bar sits over the background. */}
+    <View style={[styles.screen, { backgroundColor: ready ? DETAIL_BACKGROUND : colors.canvas }]}>
+      {/* A loaded card gets the backdrop colour in the header, so no white bar sits over the background. */}
       <Stack.Screen
         options={
           ready
-            ? { title, headerStyle: { backgroundColor: theme.shades[0] }, headerTintColor: theme.label, headerTitleStyle: { color: theme.label }, headerShadowVisible: false }
+            ? { title, headerStyle: { backgroundColor: DETAIL_BACKGROUND }, headerTintColor: theme.label, headerTitleStyle: { color: theme.label }, headerShadowVisible: false }
             : { title }
         }
       />

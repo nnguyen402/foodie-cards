@@ -37,3 +37,6 @@ const themes: Record<RestaurantStage, StageTheme> = {
 export function stageTheme(stage: RestaurantStage): StageTheme {
   return themes[stage];
 }
+
+/** The card detail's backdrop: midnight blue under the rarity-coloured diamonds, and behind the header. */
+export const DETAIL_BACKGROUND = '#191970';

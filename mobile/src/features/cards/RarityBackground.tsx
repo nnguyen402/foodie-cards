@@ -2,16 +2,13 @@ import { useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions, type ImageSourcePropType } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import type { RestaurantStage } from '@foodie-cards/shared';
-import { stageTheme } from './stageStyles';
+import { diamondLayout } from './diamondLayout';
+import { DETAIL_BACKGROUND, stageTheme } from './stageStyles';
 
-// A lattice of diamonds behind the card detail, slowly shifting between dark shades of the
-// card's rarity colour. 40 shapes, each driven by a Reanimated CSS animation on the UI thread
-// (no per-frame JS). Reduce Motion leaves them still. The shades are dark so text stays readable.
+// Diamonds scattered over a midnight-blue backdrop behind the card detail, slowly shifting between
+// shades of the card's rarity colour. 40 shapes in fixed random places and sizes (diamondLayout), each driven by a Reanimated CSS animation on the UI thread
+// (no per-frame JS). Reduce Motion leaves them still.
 
-const COLUMNS = 5;
-const ROWS = 8;
-const MIN_LOOP_MS = 6000;
-const LOOP_STEP_MS = 700;
 const IMAGE_DIM = 'rgba(8,6,12,0.55)';
 
 type RarityBackgroundProps = {
@@ -23,38 +20,23 @@ type RarityBackgroundProps = {
 export function RarityBackground({ stage, image }: RarityBackgroundProps) {
   const { width, height } = useWindowDimensions();
   const reducedMotion = useReducedMotion();
-  const [dark, mid, light] = stageTheme(stage).shades;
+  const { shades, glow } = stageTheme(stage);
+  const mid = shades[1];
 
+  // Between the rarity's mid shade and its glow colour, kept faint so text over it stays readable.
   const keyframes = useMemo(
     () => ({
-      '0%': { backgroundColor: dark, opacity: 0.55, transform: [{ rotate: '45deg' }, { scale: 0.92 }] },
-      '50%': { backgroundColor: light, opacity: 0.95, transform: [{ rotate: '45deg' }, { scale: 1.04 }] },
-      '100%': { backgroundColor: dark, opacity: 0.55, transform: [{ rotate: '45deg' }, { scale: 0.92 }] },
+      '0%': { backgroundColor: mid, opacity: 0.5, transform: [{ rotate: '45deg' }, { scale: 0.94 }] },
+      '50%': { backgroundColor: glow, opacity: 0.3, transform: [{ rotate: '45deg' }, { scale: 1.04 }] },
+      '100%': { backgroundColor: mid, opacity: 0.5, transform: [{ rotate: '45deg' }, { scale: 0.94 }] },
     }),
-    [dark, light],
+    [mid, glow],
   );
 
-  const diamonds = useMemo(() => {
-    const cell = width / (COLUMNS - 0.5);
-    const size = cell * 0.6;
-    const rowStep = height / (ROWS - 1);
-    return Array.from({ length: COLUMNS * ROWS }, (_, index) => {
-      const row = Math.floor(index / COLUMNS);
-      const column = index % COLUMNS;
-      return {
-        key: index,
-        left: column * cell + (row % 2 ? cell / 2 : 0) + cell / 2 - size / 2,
-        top: row * rowStep - size / 2,
-        size,
-        durationMs: MIN_LOOP_MS + ((index * 37) % 5) * LOOP_STEP_MS,
-        // A diagonal wave, so neighbouring diamonds are never in step.
-        delayMs: (row + column) * 450,
-      };
-    });
-  }, [width, height]);
+  const diamonds = useMemo(() => diamondLayout(width, height), [width, height]);
 
   return (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: dark }]}>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: DETAIL_BACKGROUND }]}>
       {image ? (
         <>
           <Animated.Image source={image} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
@@ -67,7 +49,7 @@ export function RarityBackground({ stage, image }: RarityBackgroundProps) {
           style={[
             { position: 'absolute', left, top, width: size, height: size, borderRadius: size * 0.08 },
             reducedMotion
-              ? { backgroundColor: key % 2 ? mid : dark, opacity: 0.7, transform: [{ rotate: '45deg' }] }
+              ? { backgroundColor: key % 2 ? mid : glow, opacity: 0.35, transform: [{ rotate: '45deg' }] }
               : { animationName: keyframes, animationDuration: durationMs, animationDelay: delayMs, animationIterationCount: 'infinite', animationTimingFunction: 'ease-in-out' },
           ]}
         />
