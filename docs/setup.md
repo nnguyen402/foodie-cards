@@ -13,11 +13,14 @@ Set these in the matching app environment. Do not commit `.env` files or real ke
 | Mobile | `EXPO_PUBLIC_API_URL` | Public base URL for the Express backend, with no trailing slash |
 | Server | `SUPABASE_URL` | The same Supabase project URL |
 | Server | `SUPABASE_SERVICE_ROLE_KEY` | The project service-role key; keep it in backend secrets only |
+| Server | `CORS_ALLOWED_ORIGINS` | Comma-separated exact browser origins, such as `http://localhost:8082`; no paths or trailing slashes |
 | Server | `GEMINI_API_KEY` | Gemini API key; keep it in backend secrets only |
 | Server | `GEMINI_MODEL` | The image-capable Gemini model selected for the project |
 | Server | `GEMINI_THINKING_LEVEL` | Optional Gemini 3 Flash setting: `low` (default), `medium`, or `high`; omitted from requests to other models |
 
 For local phone development, `EXPO_PUBLIC_API_URL` must use the development computer's LAN address and the backend port, such as `http://192.168.1.20:3000`. A phone cannot reach the development computer through `localhost`. Both devices need network access to that address. For a device using Expo Go against a hosted backend, use the deployed HTTPS backend URL instead.
+
+Configure `CORS_ALLOWED_ORIGINS` on the server with the exact origin serving the web app, including its scheme and port when present. The local browser setup uses `http://localhost:8082`; add the deployed web origin as another comma-separated value when needed. Entries must be HTTP or HTTPS origins without a path or trailing slash. The server does not allow credentials or arbitrary origins. Native requests without an `Origin` header continue to use bearer authentication.
 
 ## Supabase project and schema
 

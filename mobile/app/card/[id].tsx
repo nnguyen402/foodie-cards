@@ -7,6 +7,7 @@ import { RestaurantCard } from '@/features/cards/RestaurantCard';
 import { nextStageGoal, stageLabel } from '@/features/cards/stageStyles';
 import { ratingLabel } from '@/features/cards/themes';
 import { useCardDetail } from '@/features/cards/useCardDetail';
+import { PrivateRouteGuard } from '@/features/auth/PrivateRouteGuard';
 import { colors, radius, spacing } from '@/theme/tokens';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -38,7 +39,7 @@ function GoalRow({ label, value, met, last }: { label: string; value: string; me
   );
 }
 
-export default function CardDetailScreen() {
+function CardDetailContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
@@ -124,6 +125,14 @@ export default function CardDetailScreen() {
         {content}
       </ScrollView>
     </>
+  );
+}
+
+export default function CardDetailScreen() {
+  return (
+    <PrivateRouteGuard>
+      <CardDetailContent />
+    </PrivateRouteGuard>
   );
 }
 

@@ -18,6 +18,7 @@ import type { ServerDependencies } from './auth.js';
 import { canonicalizeReceiptItems, ReceiptItemResolutionError, safeConfirmedReceiptSchema, uuidSchema } from './receipts/submit.js';
 import { createReceiptRouter } from './receipts/routes.js';
 import type { ReceiptDependencies } from './receipts/store.js';
+import { createCorsMiddleware } from './cors.js';
 
 export type { ServerDependencies } from './auth.js';
 
@@ -58,9 +59,11 @@ function requireService<T extends keyof ServerDependencies>(dependencies: Server
 export function createApp(
   dependencies: ServerDependencies | undefined = undefined,
   receiptDependencies: ReceiptDependencies | undefined = undefined,
+  corsAllowedOrigins: string | undefined = '',
 ): Express {
   const app = express();
   app.disable('x-powered-by');
+  app.use(createCorsMiddleware(corsAllowedOrigins));
   app.use(express.json({ limit: '512kb' }));
 
   app.get('/health', (_req, res) => res.status(200).json({ ok: true }));

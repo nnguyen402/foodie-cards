@@ -12,7 +12,7 @@ import {
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export type ReceiptImageUpload = { uri: string; name: string; type: 'image/jpeg' };
+export type ReceiptImageUpload = { uri: string; name: string; type: 'image/jpeg' | 'image/png' | 'image/webp'; file?: Blob };
 export type ReceiptApiOptions = {
   baseUrl: string;
   fetcher?: typeof fetch;
@@ -140,7 +140,8 @@ export function createReceiptApi(options: ReceiptApiOptions) {
     },
     extractReceipt(token: string, image: ReceiptImageUpload, signal?: AbortSignal): Promise<ReceiptDraft> {
       const form = formDataFactory();
-      form.append('image', { uri: image.uri, name: image.name, type: image.type } as unknown as Blob);
+      if (image.file) form.append('image', image.file, image.name);
+      else form.append('image', { uri: image.uri, name: image.name, type: image.type } as unknown as Blob);
       return request('/api/receipts/extract', token, { method: 'POST', body: form }, receiptDraftSchema, signal);
     },
     getDraft(token: string, draftId: string, signal?: AbortSignal): Promise<ReceiptDraft> {

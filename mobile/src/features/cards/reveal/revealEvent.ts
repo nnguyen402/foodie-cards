@@ -32,8 +32,8 @@ export function parseRevealPayload(payload: unknown): RevealPayload | null {
   return { cardId, stage: parsedStage.data, previousStage: parsedPrevious.data };
 }
 
-// Reveals finished or found unusable in this app session. Kept in memory only, so the collection
-// stops offering them even while the server cannot record viewed_at yet.
+// Reveals acknowledged by the server or found unusable in this app session.
+// Failed acknowledgements stay eligible for recovery.
 const handledEventIds = new Set<string>();
 
 export function markRevealHandled(id: string): void {
