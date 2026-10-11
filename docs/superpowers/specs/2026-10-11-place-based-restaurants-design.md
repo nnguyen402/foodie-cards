@@ -11,7 +11,7 @@ Scanning a receipt picks the restaurant automatically, from the name on the rece
 1. **Approach A: the place travels with the submit.** Submit accepts `restaurantId` (today) or a `place`. One database step finds or creates the restaurant, builds its menu items and accepts the receipt. Nothing is created if the user abandons the scan.
 2. **One card per brand.** A chain is one restaurant row keyed by brand. Independent restaurants are one row per OSM place. This matches the `brandKey` already on map pins.
 3. **No nearby match falls back to search by name**, not to the seeded list and not to free typing.
-4. Not changing: the user's exact location never leaves the phone. Art stays keyed by cuisine only (never by brand or restaurant name).
+4. Location handling: the exact user coordinate is used by the existing nearby map lookup, which may send it to a public Overpass server; Nominatim search receives a 0.1° rounded area bias. The app backend receives only the chosen place's coordinates, never the user's coordinate. Art stays keyed by cuisine only (never by brand or restaurant name).
 
 ## Pieces and owners
 

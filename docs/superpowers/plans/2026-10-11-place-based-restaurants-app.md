@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- The user's exact location never leaves the phone; only the chosen place's own coordinates are sent.
+- The exact user coordinate may be sent to the public Overpass server by the existing nearby map lookup; Nominatim gets a rounded 0.1° area bias. The app backend receives the chosen place's coordinates, never the user's coordinate.
 - Art stays keyed by cuisine only: no restaurant, chain, logo or mascot names in art files, keys or ability lines.
 - Brand keys use the map's format: `wikidata:Q491516` or `name:<normalizedName>`. Reuse `normalizedName` from `mobile/src/features/map/mapRestaurants.ts`; do not write a second normaliser.
 - Preselect when name score >= 0.8 and distance <= 300 m (nearest wins). Nearby fetch radius 500 m.

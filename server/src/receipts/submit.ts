@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { confirmedReceiptBaseSchema, type ConfirmedReceipt } from '@foodie-cards/shared';
+import { confirmedReceiptBaseSchema, placeSchema, type ConfirmedReceipt, type Place } from '@foodie-cards/shared';
 import type { ReceiptMenuItem } from '../auth.js';
 
 export const uuidSchema = z.string().uuid();
@@ -9,14 +9,17 @@ const receiptItemSubmissionSchema = z.object({
   quantity: z.number().int().min(1).max(99),
 }).strict();
 
-export const safeConfirmedReceiptSchema = confirmedReceiptBaseSchema.omit({ place: true }).extend({
+export const safeConfirmedReceiptSchema = confirmedReceiptBaseSchema.extend({
   draftId: uuidSchema,
   submissionId: uuidSchema,
-  restaurantId: uuidSchema,
+  restaurantId: uuidSchema.optional(),
+  place: placeSchema.optional(),
   receiptNumber: z.string().trim().max(120).nullable(),
   totalMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   items: z.array(receiptItemSubmissionSchema).min(1).max(100),
-}).strict();
+}).strict().refine((value) => (value.restaurantId === undefined) !== (value.place === undefined));
+
+export type PlaceSubmission = Omit<ConfirmedReceipt, 'restaurantId' | 'place'> & { place: Place };
 
 function normalizedMenuName(value: string): string {
   return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');

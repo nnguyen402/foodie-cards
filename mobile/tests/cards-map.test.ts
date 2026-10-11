@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { toCardView, type CardRow } from '../src/features/cards/mapCard';
+import { toCardView, CARD_SELECT, type CardRow } from '../src/features/cards/mapCard';
+import { buildMapRestaurants } from '../src/features/map/mapRestaurants';
 
 const row = (overrides: Partial<CardRow> = {}): CardRow => ({
   id: 'card-1',
@@ -37,6 +38,27 @@ describe('persisted card rows', () => {
         heroImagePath: null,
         heroImageKind: null,
       },
+    });
+  });
+
+  it('keeps place coordinates and brand key from a new restaurant through to its map pin', () => {
+    const dynamic = row({ restaurants: {
+      ...row().restaurants!,
+      id: 'restaurant-new',
+      name: 'New Noodle House',
+      latitude: 33.75,
+      longitude: -84.39,
+      brand_key: 'wikidata:Q12345',
+    } });
+    const card = toCardView(dynamic, null)!;
+    const [pin] = buildMapRestaurants({ owned: [card], locked: [] });
+
+    expect(CARD_SELECT).toContain('latitude,longitude,brand_key');
+    expect(pin).toMatchObject({
+      id: 'restaurant-new',
+      name: 'New Noodle House',
+      brandKey: 'wikidata:Q12345',
+      coordinate: { latitude: 33.75, longitude: -84.39 },
     });
   });
 

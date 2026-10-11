@@ -1,7 +1,7 @@
 import { resolveRestaurantTheme, restaurantStageSchema, type RestaurantTheme } from '@foodie-cards/shared';
 import type { CardView } from './types';
 
-export const CARD_SELECT = 'id,card_xp,stage,visit_count,last_visit_date,restaurants(id,name,location_label,category,theme,hero_image_path,hero_image_kind)';
+export const CARD_SELECT = 'id,card_xp,stage,visit_count,last_visit_date,restaurants(id,name,location_label,category,theme,hero_image_path,hero_image_kind,latitude,longitude,brand_key)';
 
 // Shape returned by CARD_SELECT. Stage and theme are unvalidated database values.
 export type CardRow = {
@@ -18,6 +18,9 @@ export type CardRow = {
     theme: Record<string, unknown> | null;
     hero_image_path: string | null;
     hero_image_kind: 'logo' | 'storefront' | 'food' | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    brand_key?: string | null;
   } | null;
 };
 
@@ -30,6 +33,9 @@ export function toCatalogRestaurant(row: NonNullable<CardRow['restaurants']>): C
     theme: resolveRestaurantTheme(row.category, (row.theme ?? {}) as Partial<RestaurantTheme>),
     heroImagePath: row.hero_image_path,
     heroImageKind: row.hero_image_kind,
+    ...(row.latitude === undefined ? {} : { latitude: row.latitude }),
+    ...(row.longitude === undefined ? {} : { longitude: row.longitude }),
+    ...(row.brand_key === undefined ? {} : { brandKey: row.brand_key }),
   };
 }
 

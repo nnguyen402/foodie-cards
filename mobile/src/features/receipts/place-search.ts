@@ -8,6 +8,15 @@ const ENDPOINT = 'https://nominatim.openstreetmap.org/search';
 const VIEWBOX_DEGREES = 0.5;
 const MIN_GAP_MS = 1000;
 const HEADERS = { 'User-Agent': 'FoodieCards/1.0 (jamesafon4@gmail.com)', Accept: 'application/json' };
+const FOOD_TYPES = new Set([
+  'restaurant', 'fast_food', 'cafe', 'food_court', 'ice_cream', 'bar', 'pub', 'biergarten',
+  'bakery', 'deli', 'confectionery', 'cheese', 'coffee', 'tea', 'pastry', 'chocolate', 'butcher',
+]);
+
+function isFoodPlace(category: unknown, type: unknown): type is string {
+  return typeof category === 'string' && (category === 'amenity' || category === 'shop')
+    && typeof type === 'string' && FOOD_TYPES.has(type);
+}
 
 export function nominatimUrl(query: string, near: Coordinate | null): string {
   const url = new URL(ENDPOINT);
@@ -32,6 +41,7 @@ export function mapNominatim(response: unknown): OsmPlace[] {
   return response.flatMap((raw): OsmPlace[] => {
     if (!raw || typeof raw !== 'object') return [];
     const row = raw as Record<string, unknown>;
+    if (!isFoodPlace(row.category, row.type)) return [];
     const latitude = parseFloat(String(row.lat));
     const longitude = parseFloat(String(row.lon));
     const name = text(row.name) ?? text(text(row.display_name)?.split(',')[0]);
@@ -45,7 +55,7 @@ export function mapNominatim(response: unknown): OsmPlace[] {
       key: `osm:${row.osm_type}/${row.osm_id}`,
       name,
       coordinate: { latitude, longitude },
-      amenity: row.category === 'amenity' ? text(row.type) ?? 'restaurant' : 'restaurant',
+      amenity: row.type as string,
       cuisine: null,
       address: street === '' ? null : street,
       city: text(parts.city) ?? text(parts.town) ?? text(parts.village),
@@ -61,7 +71,7 @@ export function createPlaceSearch(fetcher: typeof fetch = fetch, now: () => numb
   const cache = new Map<string, OsmPlace[]>();
   let lastAt = -Infinity;
   return async (query: string, near: Coordinate | null, signal?: AbortSignal): Promise<OsmPlace[]> => {
-    const key = normalizedName(query);
+    const key = JSON.stringify([normalizedName(query), near?.latitude ?? null, near?.longitude ?? null]);
     const cached = cache.get(key);
     if (cached) return cached;
     const delay = Math.max(0, MIN_GAP_MS - (now() - lastAt));

@@ -128,6 +128,42 @@ describe('receipt submission', () => {
     expect(JSON.stringify(acceptReceipt.mock.calls[0])).not.toContain('clientXP');
   });
 
+  it('rejects a place that does not match the server stored receipt name before acceptance', async () => {
+    const acceptPlaceReceipt = vi.fn();
+    const app = appWith({
+      loadReceiptDraft: vi.fn(async () => ({ imagePath: `${userId}/receipt.jpg`, imageHash: 'a'.repeat(64), status: 'draft', submissionId: null, acceptanceResult: null, restaurantName: 'Taco Bell' })),
+      acceptPlaceReceipt,
+    });
+    await authed(app).send({ ...confirmed, restaurantId: undefined, place: { osmType: 'node', osmId: 22, name: 'Chick-fil-A', brandKey: 'name:taco bell', latitude: 33, longitude: -84 } }).expect(400);
+    expect(acceptPlaceReceipt).not.toHaveBeenCalled();
+  });
+
+  it('does not accept a place based on a short substring overlap alone', async () => {
+    const acceptPlaceReceipt = vi.fn();
+    const app = appWith({
+      loadReceiptDraft: vi.fn(async () => ({ imagePath: `${userId}/receipt.jpg`, imageHash: 'a'.repeat(64), status: 'draft', submissionId: null, acceptanceResult: null, restaurantName: 'Taco Bell' })),
+      acceptPlaceReceipt,
+    });
+    await authed(app).send({ ...confirmed, restaurantId: undefined, place: { osmType: 'node', osmId: 23, name: 'Bell', latitude: 33, longitude: -84 } }).expect(400);
+    expect(acceptPlaceReceipt).not.toHaveBeenCalled();
+  });
+
+  it('passes a matching place and confirmed lines to atomic place acceptance', async () => {
+    const acceptPlaceReceipt = vi.fn(async () => progression);
+    const loadRestaurantMenu = vi.fn();
+    const app = appWith({
+      loadReceiptDraft: vi.fn(async () => ({ imagePath: `${userId}/receipt.jpg`, imageHash: 'a'.repeat(64), status: 'draft', submissionId: null, acceptanceResult: null, restaurantName: 'CHICK-FIL-A #01234' })),
+      acceptPlaceReceipt, loadRestaurantMenu,
+    });
+    const payload = { ...confirmed, restaurantId: undefined, place: { osmType: 'node', osmId: 22, name: 'Chick-fil-A', brandKey: 'name:chick fil a', latitude: 33, longitude: -84 } };
+    await authed(app).send(payload).expect(200);
+    expect(acceptPlaceReceipt).toHaveBeenCalledWith(userId, draftId, submissionId, expect.objectContaining({ place: payload.place, items: [
+      { originalText: 'BBQ sand', confirmedName: 'BBQ   Sandwich', quantity: 1 },
+      { originalText: 'Sandwich', confirmedName: 'bbq sandwich', quantity: 2 },
+    ] }));
+    expect(loadRestaurantMenu).not.toHaveBeenCalled();
+  });
+
   it('replays an accepted submission without requiring a menu match after catalog changes', async () => {
     const acceptReceipt = vi.fn(async () => progression);
     const loadRestaurantMenu = vi.fn(async () => null);

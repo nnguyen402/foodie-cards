@@ -34,9 +34,11 @@ describe('nominatim place search', () => {
       { osm_type: 'node', osm_id: 10, lat: '1', lon: '1' },
       { osm_type: 'node', osm_id: 11, name: 'No lon', lat: '1' },
       { osm_type: 'way', osm_id: 12, display_name: 'Shop Name, 5 Elm St, Town', lat: '10', lon: '20', category: 'shop', type: 'bakery', address: { house_number: '5', road: 'Elm St' } },
+      { osm_type: 'node', osm_id: 13, name: 'Office', lat: '10', lon: '20', category: 'office', type: 'company' },
+      { osm_type: 'node', osm_id: 14, name: 'Clothing shop', lat: '10', lon: '20', category: 'shop', type: 'clothes' },
     ]);
     expect(places).toHaveLength(1);
-    expect(places[0]).toMatchObject({ osmType: 'way', osmId: 12, name: 'Shop Name', amenity: 'restaurant', address: '5 Elm St' });
+    expect(places[0]).toMatchObject({ osmType: 'way', osmId: 12, name: 'Shop Name', amenity: 'bakery', address: '5 Elm St' });
   });
   it('rejects out-of-range coordinates', () => {
     expect(mapNominatim([{ osm_type: 'node', osm_id: 1, name: 'A', lat: '95', lon: '0' }, { osm_type: 'node', osm_id: 2, name: 'B', lat: '0', lon: '181' }])).toEqual([]);
@@ -48,6 +50,14 @@ describe('nominatim place search', () => {
     await search('Chick-fil-A', null); await search(' chick-fil-a ', null); await search('Other', null);
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(waits).toEqual([1000]);
+  });
+  it('does not reuse cached results from a different search area', async () => {
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response('[]'));
+    const search = createPlaceSearch(fetcher as never, () => 0, async () => {});
+    await search('Cafe', { latitude: 33.7, longitude: -84.4 });
+    await search(' cafe ', { latitude: 40.7, longitude: -74 });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher.mock.calls[0][0]).not.toBe(fetcher.mock.calls[1][0]);
   });
   it('sends an identifying User-Agent and the abort signal', async () => {
     const fetcher = vi.fn(async (..._args: unknown[]) => new Response('[]'));

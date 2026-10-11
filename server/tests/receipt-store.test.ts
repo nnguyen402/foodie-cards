@@ -40,11 +40,15 @@ function clientWith(options: { insertError?: unknown; insertReject?: boolean; up
     remove: vi.fn(async () => ({ data: [], error: null })),
   };
   const supabase = {
-    from: vi.fn((table: string) => table === 'receipts' ? query : {
-      select: vi.fn(() => ({ order: vi.fn(async () => ({ data: [
-        { id: 'restaurant-1', name: 'Busy Bee Cafe', aliases: ['Busy Bee'], location_label: 'Atlanta' },
-      ], error: null })) })),
-    }),
+    from: vi.fn((table: string) => table === 'receipts' ? query : (() => {
+      const catalogQuery = {
+        eq: vi.fn(() => catalogQuery),
+        order: vi.fn(async () => ({ data: [
+          { id: 'restaurant-1', name: 'Busy Bee Cafe', aliases: ['Busy Bee'], location_label: 'Atlanta' },
+        ], error: null })),
+      };
+      return { select: vi.fn(() => catalogQuery) };
+    })()),
     storage: { from: vi.fn(() => storage) },
   };
   return { supabase, query, storage, constraints, insert, single, maybeSingle };

@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import type { ReceiptDraft, ReceiptRestaurant, ProgressionResult } from '@foodie-cards/shared';
 import { useAuth } from '@/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
 import { createReceiptApi } from '@/features/receipts/receipt-api';
 import { createReceiptFlowState, formatReceiptTotal, parseReceiptTotal } from '@/features/receipts/receipt-state';
-import { AppText } from '@/components/ui/app-text';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 import { MessagePanel } from '@/components/ui/message-panel';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { VintageScreen } from '@/components/vintage/VintageScreen';
+import { useVintageKit, vintageCard } from '@/components/vintage/kit';
+import { vintage, vintageRadius, vintageSpace, vintageText, withAlpha } from '@/theme/vintage';
 import { coordinateFor, type Coordinate } from '@/features/map/coordinates';
 import { sessionNearby } from '@/features/map/sessionNearby';
 import { parseUnlockParams, type UnlockTarget } from '@/features/map/unlockTarget';
@@ -73,7 +75,7 @@ function ConfirmReceiptContent({ auth, userId, draftId, unlock: unlockParam }: {
   const controllerRef = useRef<AbortController | null>(null);
   const submitInFlight = useRef(false);
   const operationKey = `${userId ?? ''}:${draftId ?? ''}`;
-  // Restaurant picker. The user's coordinate is used here on the phone only and is never submitted.
+  // Restaurant picker. Nearby map lookup may send the user's coordinate to public Overpass; name search only gets a rounded area bias. The app backend receives the chosen place's coordinates.
   const [unlock] = useState(unlockParam);
   const location = useUserLocation();
   const [locationWaitOver, setLocationWaitOver] = useState(false);
@@ -91,6 +93,7 @@ function ConfirmReceiptContent({ auth, userId, draftId, unlock: unlockParam }: {
   const [searchMessage, setSearchMessage] = useState<string | null>(null);
   const pickStarted = useRef(false);
   const mounted = useRef(true);
+  const kit = useVintageKit();
 
   useEffect(() => {
     mounted.current = true;
@@ -204,7 +207,7 @@ function ConfirmReceiptContent({ auth, userId, draftId, unlock: unlockParam }: {
     const key = candidateKey(candidate);
     const selected = chosen !== null && candidateKey(chosen) === key;
     const distance = candidateDistance(user, candidate);
-    return <Pressable key={key} accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={() => choosePlace(candidate)} style={[styles.restaurant, selected && styles.selected]}><View style={styles.flex}><AppText strong>{candidate.name}</AppText><AppText variant="small" muted>{distance ? `${distance} · ` : ''}{placeDetail(candidate)}</AppText></View><AppText style={styles.radio}>{selected ? '●' : '○'}</AppText></Pressable>;
+    return <Pressable key={key} accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={() => choosePlace(candidate)} style={[styles.restaurant, selected && styles.selected]}><View style={styles.flex}><Text allowFontScaling style={[styles.placeName, kit.font('semibold')]}>{candidate.name}</Text><Text allowFontScaling style={[styles.placeDetail, kit.font('body')]}>{distance ? `${distance} · ` : ''}{placeDetail(candidate)}</Text></View><Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={22} color={vintage.gold} /></Pressable>;
   }
 
   async function submit() {
@@ -255,65 +258,90 @@ function ConfirmReceiptContent({ auth, userId, draftId, unlock: unlockParam }: {
     }
   }
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color={colors.accent} /><AppText muted>Loading your saved receipt…</AppText></View>;
-  if (!userId) return <View style={styles.screen}><MessagePanel title="Sign in to continue" body="This receipt draft is private to your account." /><Button label="Go to sign in" onPress={() => router.replace('/(auth)/sign-in')} /></View>;
-  if (error && !draft) return <ScrollView style={styles.screen} contentContainerStyle={styles.content}><MessagePanel title="Receipt draft unavailable" body={error} kind="error" /><Button label="Return to Scan" variant="secondary" onPress={() => router.replace('/(tabs)/scan')} /></ScrollView>;
-  if (result) return <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-    <View style={styles.success}><AppText variant="small" strong style={styles.eyebrow}>VISIT ADDED</AppText><AppText variant="display" strong>Receipt confirmed.</AppText><AppText muted>Your visit is saved. You earned {result.xpBreakdown.totalXP} XP and now have {result.visitCount} visit{result.visitCount === 1 ? '' : 's'} at this restaurant.</AppText><AppText variant="small" muted>Card progress: {result.cardXP} XP · {result.stage}</AppText></View>
+  const reviewTitle = { eyebrow: 'REVIEW RECEIPT', title: 'CHECK THE\nDETAILS', subtitle: 'Correct anything that was read incorrectly before confirming.' };
+
+  if (loading) return <VintageScreen {...reviewTitle}><View style={[styles.card, styles.row]}><ActivityIndicator color={vintage.gold} /><Text allowFontScaling style={[styles.muted, kit.font('body')]}>Loading your saved receipt…</Text></View></VintageScreen>;
+  if (!userId) return <VintageScreen {...reviewTitle}><MessagePanel title="Sign in to continue" body="This receipt draft is private to your account." {...kit.notice('plain')} /><Button label="Go to sign in" onPress={() => router.replace('/(auth)/sign-in')} {...kit.primaryButton} /></VintageScreen>;
+  if (error && !draft) return <VintageScreen {...reviewTitle}><MessagePanel title="Receipt draft unavailable" body={error} kind="error" {...kit.notice('error')} /><Button label="Return to Scan" variant="secondary" onPress={() => router.replace('/(tabs)/scan')} {...kit.outlineButton} /></VintageScreen>;
+  if (result) return <VintageScreen eyebrow="VISIT ADDED" title={'RECEIPT\nCONFIRMED'} subtitle="Your visit is saved to your collection.">
+    <View style={styles.card}>
+      <Text allowFontScaling style={[styles.body, kit.font('body')]}>You earned <Text style={[styles.gold, kit.font('semibold')]}>{result.xpBreakdown.totalXP} XP</Text> and now have {result.visitCount} visit{result.visitCount === 1 ? '' : 's'} at this restaurant.</Text>
+      <View style={styles.rule} />
+      <Text allowFontScaling style={[styles.muted, kit.font('body')]}>Card progress: {result.cardXP} XP · {result.stage}</Text>
+    </View>
     <Button
       label={result.revealEventId ? 'Reveal card' : 'Back to collection'}
       onPress={() => result.revealEventId
         ? router.replace({ pathname: '/reveal/[eventId]', params: { eventId: result.revealEventId } })
         : router.replace('/(tabs)/collection')}
+      {...kit.primaryButton}
     />
-  </ScrollView>;
+  </VintageScreen>;
 
-  return <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-    <View style={styles.heading}><AppText variant="small" strong style={styles.eyebrow}>REVIEW RECEIPT</AppText><AppText variant="display" strong>Check the details.</AppText><AppText muted>Correct anything that was read incorrectly before confirming.</AppText></View>
-    {draft?.warnings.map((warning, index) => <MessagePanel key={`${index}-${warning}`} title="Please review" body={warning} />)}
-    <View style={styles.card}><AppText variant="heading" strong>Restaurant</AppText><AppText variant="small" muted>{draft?.restaurantName ? `Detected: ${draft.restaurantName}` : 'Choose the restaurant printed on your receipt.'}</AppText>
-      {!pickReady ? <View style={styles.row}><ActivityIndicator color={colors.accent} /><AppText variant="small" muted>Finding where you ate…</AppText></View> : <>
+  return <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><VintageScreen {...reviewTitle} keyboardShouldPersistTaps="handled">
+    {draft?.warnings.map((warning, index) => <MessagePanel key={`${index}-${warning}`} title="Please review" body={warning} {...kit.notice('plain')} />)}
+    <View style={styles.card}><Text allowFontScaling accessibilityRole="header" style={[styles.section, kit.font('display')]}>Restaurant</Text><Text allowFontScaling style={[styles.muted, kit.font('body')]}>{draft?.restaurantName ? `Detected: ${draft.restaurantName}` : 'Choose the restaurant printed on your receipt.'}</Text>
+      {!pickReady ? <View style={styles.row}><ActivityIndicator color={vintage.gold} /><Text allowFontScaling style={[styles.muted, kit.font('body')]}>Finding where you ate…</Text></View> : <>
         {chosen ? <View style={[styles.restaurant, styles.selected]} accessibilityLiveRegion="polite" testID="chosen-restaurant"><View style={styles.flex}>
-          <AppText>{placeConfirmed ? 'You ate at ' : 'We think you ate at '}<AppText strong>{chosen.name}</AppText>{candidateDistance(user, chosen) ? ` · ${candidateDistance(user, chosen)}` : ''}</AppText>
-          <AppText variant="small" muted>{placeDetail(chosen)}</AppText>
-        </View>{placeConfirmed ? <AppText style={styles.radio}>●</AppText> : null}</View>
-          : <AppText variant="small" muted>We couldn’t tell where you ate. Search by name or choose a restaurant.</AppText>}
-        {chosen && !placeConfirmed ? <Button label="Confirm" onPress={() => choosePlace(chosen)} testID="confirm-restaurant" /> : null}
+          <Text allowFontScaling style={[styles.eyebrow, kit.font('semibold')]}>{placeConfirmed ? 'YOU ATE AT' : 'WE THINK YOU ATE AT'}</Text>
+          <Text allowFontScaling style={[styles.placeName, kit.font('semibold')]}>{chosen.name}{candidateDistance(user, chosen) ? <Text style={[styles.placeDetail, kit.font('body')]}>{` · ${candidateDistance(user, chosen)}`}</Text> : null}</Text>
+          <Text allowFontScaling style={[styles.placeDetail, kit.font('body')]}>{placeDetail(chosen)}</Text>
+        </View>{placeConfirmed ? <Ionicons name="checkmark-circle" size={24} color={vintage.gold} /> : null}</View>
+          : <Text allowFontScaling style={[styles.muted, kit.font('body')]}>We couldn’t tell where you ate. Search by name or choose a restaurant.</Text>}
+        {chosen && !placeConfirmed ? <Button label="Confirm" onPress={() => choosePlace(chosen)} testID="confirm-restaurant" {...kit.primaryButton} /> : null}
         <View style={styles.rowBetween}>
-          <Button label={listOpen ? 'Hide list' : 'Choose another'} variant="quiet" fullWidth={false} onPress={() => setListOpen((open) => !open)} testID="choose-another-restaurant" />
-          <Button label="Search by name" variant="quiet" fullWidth={false} onPress={() => setSearchOpen((open) => !open)} testID="search-restaurant" />
+          <Button label={listOpen ? 'Hide list' : 'Choose another'} variant="quiet" fullWidth={false} onPress={() => setListOpen((open) => !open)} testID="choose-another-restaurant" {...kit.quietButton} leftIcon={<Ionicons name={listOpen ? 'chevron-up' : 'list'} size={16} color={vintage.gold} />} />
+          <Button label="Search by name" variant="quiet" fullWidth={false} onPress={() => setSearchOpen((open) => !open)} testID="search-restaurant" {...kit.quietButton} leftIcon={<Ionicons name="search" size={16} color={vintage.gold} />} />
         </View>
         {listOpen ? candidates.map(placeRow) : null}
-        {listOpen && candidates.length === 0 ? <AppText variant="small" muted>No nearby places to list. Search by name instead.</AppText> : null}
+        {listOpen && candidates.length === 0 ? <Text allowFontScaling style={[styles.muted, kit.font('body')]}>No nearby places to list. Search by name instead.</Text> : null}
         {searchOpen ? <View style={styles.search}>
-          <FormField label="Restaurant name" value={query} onChangeText={(value) => { setQuery(value); setSearchMessage(null); }} placeholder="Name on the receipt" returnKeyType="search" onSubmitEditing={() => void runSearch()} maxLength={120} testID="restaurant-search-query" />
-          <Button label="Search" variant="secondary" onPress={() => void runSearch()} loading={searching} disabled={!query.trim()} testID="restaurant-search" />
-          {searchMessage ? <AppText variant="small" muted>{searchMessage}</AppText> : null}
+          <FormField label="Restaurant name" value={query} onChangeText={(value) => { setQuery(value); setSearchMessage(null); }} placeholder="Name on the receipt" returnKeyType="search" onSubmitEditing={() => void runSearch()} maxLength={120} testID="restaurant-search-query" {...kit.field} />
+          <Button label="Search" variant="secondary" onPress={() => void runSearch()} loading={searching} disabled={!query.trim()} testID="restaurant-search" {...kit.outlineButton} />
+          {searchMessage ? <Text allowFontScaling accessibilityLiveRegion="polite" style={[styles.muted, kit.font('body')]}>{searchMessage}</Text> : null}
           {searchResults?.map(placeRow)}
         </View> : null}
       </>}
     </View>
-    <View style={styles.card}><AppText variant="heading" strong>Receipt details</AppText>
-      <FormField label="Receipt date" value={receiptDate} onChangeText={setReceiptDate} placeholder="YYYY-MM-DD" hint="Use the local date printed on the receipt." testID="receipt-date" />
-      <FormField label="Receipt number (optional)" value={receiptNumber} onChangeText={setReceiptNumber} placeholder="Receipt number" maxLength={120} testID="receipt-number" />
-      <FormField label="Grand total" value={total} onChangeText={setTotal} placeholder="24.50" keyboardType="decimal-pad" hint="Enter dollars and cents, for example 24.50." testID="receipt-total" />
-      <FormField label="Currency" value={currency} onChangeText={(value) => setCurrency(value.toUpperCase())} placeholder="USD" autoCapitalize="characters" maxLength={3} testID="receipt-currency" />
+    <View style={styles.card}><Text allowFontScaling accessibilityRole="header" style={[styles.section, kit.font('display')]}>Receipt details</Text>
+      <FormField label="Receipt date" value={receiptDate} onChangeText={setReceiptDate} placeholder="YYYY-MM-DD" hint="Use the local date printed on the receipt." testID="receipt-date" {...kit.field} />
+      <FormField label="Receipt number (optional)" value={receiptNumber} onChangeText={setReceiptNumber} placeholder="Receipt number" maxLength={120} testID="receipt-number" {...kit.field} />
+      <FormField label="Grand total" value={total} onChangeText={setTotal} placeholder="24.50" keyboardType="decimal-pad" hint="Enter dollars and cents, for example 24.50." testID="receipt-total" {...kit.field} />
+      <FormField label="Currency" value={currency} onChangeText={(value) => setCurrency(value.toUpperCase())} placeholder="USD" autoCapitalize="characters" maxLength={3} testID="receipt-currency" {...kit.field} />
     </View>
-    <View style={styles.rowBetween}><AppText variant="heading" strong>Food and drinks</AppText><Button label="Add item" variant="quiet" onPress={addItem} testID="add-receipt-item" /></View>
+    <View style={styles.rowBetween}><Text allowFontScaling accessibilityRole="header" style={[styles.sectionOnRed, kit.font('display')]}>Food and drinks</Text><Button label="Add item" variant="quiet" fullWidth={false} onPress={addItem} testID="add-receipt-item" {...kit.quietButton} leftIcon={<Ionicons name="add" size={18} color={vintage.gold} />} /></View>
     {items.map((item) => <View key={item.key} style={styles.card}>
-      <FormField label="Original receipt text" value={item.originalText} onChangeText={(value) => updateItem(item.key, { originalText: value })} placeholder="Text as printed" maxLength={240} />
-      <FormField label="Dish or drink name" value={item.suggestedName} onChangeText={(value) => updateItem(item.key, { suggestedName: value })} placeholder="Confirmed name" maxLength={120} />
-      <FormField label="Quantity" value={String(item.quantity)} onChangeText={(value) => updateItem(item.key, { quantity: value === '' ? 0 : Number(value) })} keyboardType="number-pad" maxLength={2} />
-      <Pressable accessibilityRole="button" accessibilityLabel="Remove item" onPress={() => setItems((current) => current.filter((entry) => entry.key !== item.key))}><AppText variant="small" strong style={styles.remove}>Remove item</AppText></Pressable>
+      <FormField label="Original receipt text" value={item.originalText} onChangeText={(value) => updateItem(item.key, { originalText: value })} placeholder="Text as printed" maxLength={240} {...kit.field} />
+      <FormField label="Dish or drink name" value={item.suggestedName} onChangeText={(value) => updateItem(item.key, { suggestedName: value })} placeholder="Confirmed name" maxLength={120} {...kit.field} />
+      <FormField label="Quantity" value={String(item.quantity)} onChangeText={(value) => updateItem(item.key, { quantity: value === '' ? 0 : Number(value) })} keyboardType="number-pad" maxLength={2} {...kit.field} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Remove item" hitSlop={8} style={styles.removeButton} onPress={() => setItems((current) => current.filter((entry) => entry.key !== item.key))}><Ionicons name="trash-outline" size={16} color={vintage.rust} /><Text allowFontScaling style={[styles.remove, kit.font('semibold')]}>Remove item</Text></Pressable>
     </View>)}
-    {error ? <MessagePanel title="Could not confirm this receipt" body={`${error} Your edits are kept on this screen.`} kind="error" /> : null}
-    {submitting ? <View style={styles.row}><ActivityIndicator color={colors.accent} /><AppText variant="small" muted>Confirming receipt…</AppText></View> : null}
-    <Button label={error ? 'Retry confirmation' : 'Confirm receipt'} onPress={() => void submit()} loading={submitting} disabled={auth.status !== 'signed-in' || submitting} testID="confirm-receipt" />
-    <AppText variant="caption" muted style={styles.note}>Nothing is added until you confirm this receipt.</AppText>
-  </ScrollView></KeyboardAvoidingView>;
+    {error ? <MessagePanel title="Could not confirm this receipt" body={`${error} Your edits are kept on this screen.`} kind="error" {...kit.notice('error')} /> : null}
+    {submitting ? <View style={styles.row}><ActivityIndicator color={vintage.gold} /><Text allowFontScaling style={[styles.muted, kit.font('body')]}>Confirming receipt…</Text></View> : null}
+    <Button label={error ? 'Retry confirmation' : 'Confirm receipt'} onPress={() => void submit()} loading={submitting} disabled={auth.status !== 'signed-in' || submitting} testID="confirm-receipt" {...kit.primaryButton} />
+    <Text allowFontScaling style={[styles.note, kit.font('body')]}>Nothing is added until you confirm this receipt.</Text>
+  </VintageScreen></KeyboardAvoidingView>;
 }
 
 const styles = StyleSheet.create({
-  keyboard: { flex: 1, backgroundColor: colors.canvas }, screen: { flex: 1, backgroundColor: colors.canvas }, content: { paddingHorizontal: spacing.page, paddingTop: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.lg }, center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, backgroundColor: colors.canvas },
-  heading: { gap: spacing.sm, paddingBottom: spacing.sm }, eyebrow: { letterSpacing: 1.2, color: colors.accent }, card: { padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.card, backgroundColor: colors.surface }, restaurant: { minHeight: 60, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control }, selected: { borderColor: colors.accent, backgroundColor: colors.accentSoft }, flex: { flex: 1, gap: spacing.xs }, radio: { color: colors.accent, fontSize: 20 }, rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, row: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.sm }, remove: { color: colors.error, paddingVertical: spacing.xs }, note: { textAlign: 'center' }, search: { gap: spacing.md }, success: { padding: spacing.xl, gap: spacing.md, borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  keyboard: { flex: 1, backgroundColor: vintage.deepRed },
+  card: { ...vintageCard, padding: vintageSpace.lg, gap: vintageSpace.md },
+  section: { color: vintage.cream, fontSize: 20, lineHeight: 26 },
+  sectionOnRed: { color: vintage.cream, fontSize: 20, lineHeight: 26, flexShrink: 1 },
+  body: { color: vintage.cream, fontSize: 15, lineHeight: 22 },
+  muted: { color: vintageText.muted, fontSize: 14, lineHeight: 20, flexShrink: 1 },
+  gold: { color: vintage.gold },
+  rule: { height: 1, backgroundColor: withAlpha(vintage.gold, 0.35) },
+  eyebrow: { color: vintage.gold, fontSize: 11, lineHeight: 14, letterSpacing: 2 },
+  restaurant: { minHeight: 60, padding: vintageSpace.md, flexDirection: 'row', alignItems: 'center', gap: vintageSpace.md, borderWidth: 1, borderColor: withAlpha(vintage.gold, 0.35), borderRadius: vintageRadius.control, backgroundColor: vintage.ink },
+  selected: { borderColor: vintage.gold, backgroundColor: vintage.crimson },
+  placeName: { color: vintage.cream, fontSize: 16, lineHeight: 22 },
+  placeDetail: { color: vintageText.secondary, fontSize: 13, lineHeight: 18 },
+  flex: { flex: 1, gap: vintageSpace.xs },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: vintageSpace.sm, flexWrap: 'wrap' },
+  row: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: vintageSpace.sm },
+  removeButton: { flexDirection: 'row', alignItems: 'center', gap: vintageSpace.xs, alignSelf: 'flex-start', minHeight: 32 },
+  remove: { color: vintage.rustText, fontSize: 14, lineHeight: 20 },
+  note: { color: vintageText.muted, fontSize: 12, lineHeight: 16, textAlign: 'center' },
+  search: { gap: vintageSpace.md },
 });

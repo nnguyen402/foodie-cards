@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { File } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { BrandHeader } from '@/components/brand-header';
-import { AppText } from '@/components/ui/app-text';
 import { Button } from '@/components/ui/button';
 import { MessagePanel } from '@/components/ui/message-panel';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { VintageScreen } from '@/components/vintage/VintageScreen';
+import { useVintageKit, vintageCard } from '@/components/vintage/kit';
+import { framedPrintSize, tabScrollBottomPadding, vintage, vintageRadius, vintageSpace, vintageText, withAlpha } from '@/theme/vintage';
 import { UnlockBanner } from '@/features/map/UnlockBanner';
 import { paramsForTarget, parseUnlockParams } from '@/features/map/unlockTarget';
 import { useAuth } from '@/providers/auth-provider';
@@ -169,40 +171,140 @@ function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
     setError(null);
   }
 
+  // Visual-only state: the banner can be hidden here without touching the target forwarded to confirm.
+  const kit = useVintageKit();
+  const insets = useSafeAreaInsets();
+  const screen = useWindowDimensions();
+  const scrollRef = useRef<ScrollView>(null);
+  const [bannerHidden, setBannerHidden] = useState(false);
+  const [photoSize, setPhotoSize] = useState<{ uri: string; width: number; height: number } | null>(null);
+  const previewUri = preparedImage?.previewUri ?? null;
+
+  useEffect(() => {
+    if (!previewUri) return;
+    let live = true;
+    Image.getSize(previewUri, (width, height) => { if (live) setPhotoSize({ uri: previewUri, width, height }); }, () => undefined);
+    // Bring the print and its actions into view above the tab bar.
+    const timer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+    return () => { live = false; clearTimeout(timer); };
+  }, [previewUri]);
+
+  // The print fits the card's inner width and at most ~45% of the screen height; the mat hugs it.
+  const printBox = framedPrintSize(
+    photoSize && photoSize.uri === previewUri ? photoSize : null,
+    screen.width - vintageSpace.xl * 2 - vintageSpace.xxl * 2 - (PRINT_MAT + 1) * 2,
+    screen.height * 0.45 - (PRINT_MAT + 1) * 2,
+  );
+  const signedIn = status === 'signed-in' && !!session;
+
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <BrandHeader eyebrow="Add a visit" title="Scan a receipt" subtitle="Review every detail before a visit is added to your collection." />
-      {unlockTarget ? <UnlockBanner target={unlockTarget} /> : null}
-      {error ? <MessagePanel title="Receipt not ready" body={error} kind="error" /> : null}
-      {status !== 'signed-in' || !session ? (
-        <MessagePanel title="Sign in to continue" body="A receipt draft is private to your account. Sign in before adding one." />
+    <VintageScreen
+      ref={scrollRef}
+      eyebrow="ADD A VISIT"
+      title={'SCAN A\nRECEIPT'}
+      subtitle="Review every detail before a visit is added to your collection."
+      bottomPadding={tabScrollBottomPadding(insets.bottom)}
+      keyboardShouldPersistTaps="handled"
+    >
+      {unlockTarget && !bannerHidden ? <UnlockBanner target={unlockTarget} onDismiss={() => setBannerHidden(true)} /> : null}
+      {error ? <MessagePanel title="Receipt not ready" body={error} kind="error" {...kit.notice('error')} style={[kit.notice('error').style, styles.noticeRadius]} /> : null}
+      {!signedIn ? (
+        <MessagePanel title="Sign in to continue" body="A receipt draft is private to your account. Sign in before adding one." {...kit.notice('plain')} />
       ) : (
-        <View style={styles.panel}>
-          <View style={styles.mark}><AppText variant="title" strong style={styles.markText}>+</AppText></View>
-          <AppText variant="heading" strong>Photograph or upload your receipt</AppText>
-          <AppText muted>We’ll prepare a private editable draft. Nothing is added to your collection until you confirm it.</AppText>
-          {preparedImage ? <Image source={{ uri: preparedImage.previewUri }} style={styles.preview} accessibilityLabel="Selected receipt preview" /> : null}
-          {preparedImage ? <AppText variant="caption" muted>{preparedImage.name}</AppText> : null}
-          <Button label="Take a photo" onPress={() => void chooseImage('camera')} loading={busy} testID="capture-receipt" />
-          <Button label={cameraDenied ? 'Choose from library' : 'Upload from library'} variant="secondary" onPress={() => void chooseImage('library')} loading={busy} testID="choose-receipt" />
-          {busy ? <AppText variant="small" muted>Preparing and securely reading the receipt…</AppText> : null}
-          {busy ? <Button label="Cancel" variant="quiet" onPress={cancelUpload} testID="cancel-receipt-upload" /> : null}
-          {error && preparedImage && !busy ? <Button label="Retry upload" variant="quiet" onPress={() => {
-            const current = flow.current.snapshot();
-            const operation = ++operationId.current;
-            void uploadImage(preparedImage, operation, current);
-          }} testID="retry-receipt-upload" /> : null}
+        <View style={styles.card}>
+          {preparedImage ? null : <View pointerEvents="none" style={styles.dashed} />}
+          {preparedImage ? (
+            <>
+              <View style={styles.printRow}>
+                <View style={[styles.print, { width: printBox.width + (PRINT_MAT + 1) * 2 }]}>
+                  <Image source={{ uri: preparedImage.previewUri }} resizeMode="contain" style={{ width: printBox.width, height: printBox.height }} accessibilityLabel="Selected receipt preview" />
+                </View>
+              </View>
+              <View style={styles.attachedRow}>
+                <View style={styles.chip} accessible accessibilityLabel="Receipt attached">
+                  <Text allowFontScaling style={[styles.chipText, kit.font('semibold')]}>Receipt attached ✓</Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Retake: take a new photo of the receipt"
+                  accessibilityState={{ disabled: busy }}
+                  disabled={busy}
+                  hitSlop={8}
+                  onPress={() => void chooseImage('camera')}
+                  style={[styles.retake, busy ? styles.unavailable : undefined]}
+                  testID="retake-receipt"
+                >
+                  <Ionicons name="camera-outline" size={18} color={vintage.gold} />
+                  <Text allowFontScaling style={[styles.retakeText, kit.font('semibold')]}>Retake</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.cameraRing}>
+                <View style={styles.cameraCircle}><Ionicons name="camera" size={32} color={vintage.cream} /></View>
+              </View>
+              <Text allowFontScaling accessibilityRole="header" style={[styles.cardTitle, kit.font('display')]}>Photograph or upload your receipt</Text>
+              <Text allowFontScaling style={[styles.helper, kit.font('body')]}>We’ll prepare a private editable draft. Nothing is added to your collection until you confirm it.</Text>
+            </>
+          )}
+          <View style={styles.actions}>
+            {preparedImage ? null : <Button label="Take a photo" onPress={() => void chooseImage('camera')} loading={busy} testID="capture-receipt" {...kit.primaryButton} style={[kit.primaryButton.style, styles.cardButton]} leftIcon={<Ionicons name="camera-outline" size={20} color={vintage.cream} />} />}
+            {error && preparedImage && !busy ? <Button label="Retry upload" onPress={() => {
+              const current = flow.current.snapshot();
+              const operation = ++operationId.current;
+              void uploadImage(preparedImage, operation, current);
+            }} testID="retry-receipt-upload" {...kit.primaryButton} style={[kit.primaryButton.style, styles.cardButton]} /> : null}
+            <Button label={cameraDenied ? 'Choose from library' : 'Upload from library'} variant="secondary" onPress={() => void chooseImage('library')} loading={busy} testID="choose-receipt" {...kit.outlineButton} style={[kit.outlineButton.style, styles.cardButton]} leftIcon={<Ionicons name="images-outline" size={20} color={vintage.cream} />} />
+            {busy ? <Text allowFontScaling accessibilityLiveRegion="polite" style={[styles.status, kit.font('body')]}>Preparing and securely reading the receipt…</Text> : null}
+            {busy ? <Button label="Cancel" variant="quiet" onPress={cancelUpload} testID="cancel-receipt-upload" {...kit.quietButton} /> : null}
+          </View>
         </View>
       )}
-    </ScrollView>
+    </VintageScreen>
   );
 }
 
+const PRINT_MAT = 10;
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.canvas },
-  content: { padding: spacing.page, paddingBottom: spacing.xxl, gap: spacing.xl },
-  panel: { padding: spacing.xl, gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border },
-  mark: { height: 52, width: 52, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: colors.accentSoft },
-  markText: { color: colors.accent },
-  preview: { width: '100%', height: 240, borderRadius: radius.control, backgroundColor: colors.surfaceMuted, resizeMode: 'contain' },
+  card: {
+    ...vintageCard,
+    padding: vintageSpace.xxl,
+    borderRadius: vintageRadius.sheet,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  noticeRadius: { borderRadius: vintageRadius.sheet },
+  cardButton: { borderRadius: vintageRadius.button },
+  dashed: { position: 'absolute', top: vintageSpace.sm, left: vintageSpace.sm, right: vintageSpace.sm, bottom: vintageSpace.sm, borderWidth: 1, borderStyle: 'dashed', borderColor: withAlpha(vintage.gold, 0.7), borderRadius: vintageRadius.button },
+  cameraRing: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: vintage.gold, padding: 4 },
+  cameraCircle: { flex: 1, borderRadius: 32, backgroundColor: vintage.rust, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { color: vintage.cream, fontSize: 20, lineHeight: 26, textAlign: 'center' },
+  helper: { color: vintageText.muted, fontSize: 14, lineHeight: 20, textAlign: 'center', maxWidth: 300 },
+  actions: { alignSelf: 'stretch', gap: vintageSpace.md, marginTop: vintageSpace.lg },
+  status: { color: vintageText.muted, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  printRow: { alignSelf: 'stretch', alignItems: 'center' },
+  print: {
+    padding: PRINT_MAT,
+    backgroundColor: vintage.cream,
+    borderWidth: 1,
+    borderColor: vintage.gold,
+    borderRadius: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  attachedRow: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: vintageSpace.md },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: vintageSpace.xs, paddingVertical: vintageSpace.xs, paddingHorizontal: vintageSpace.md, borderRadius: 999, backgroundColor: withAlpha(vintage.sage, 0.25), borderWidth: 1, borderColor: vintage.sage },
+  chipText: { color: vintage.cream, fontSize: 13, lineHeight: 18 },
+  retake: { flexDirection: 'row', alignItems: 'center', gap: vintageSpace.xs, minHeight: 44, paddingHorizontal: vintageSpace.sm },
+  retakeText: { color: vintage.gold, fontSize: 15, lineHeight: 20 },
+  unavailable: { opacity: 0.55 },
 });
