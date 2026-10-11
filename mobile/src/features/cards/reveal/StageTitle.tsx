@@ -7,6 +7,10 @@ import { REDUCED_FADE_MS, type RevealScript } from './script';
 // under it. Mirrors bannerIn in the reference.
 
 const INK = '#f6ede2';
+// iOS clips a text shadow to the Text's own box, which shows as a hard-edged rectangle.
+// Each letter gets transparent padding wide enough to hold the glow, cancelled by a negative margin.
+const GLOW_RADIUS = 12;
+const GLOW_ROOM = GLOW_RADIUS + 4;
 
 const letterKeyframes = {
   from: { opacity: 0, transform: [{ translateY: -10 }, { scale: 3.2 }] },
@@ -35,7 +39,7 @@ export function StageTitle({ script, restaurantName, instant = false, fade = fal
     return label.split(' ').map((word) => [...word].map((char) => ({ char, index: index++ })));
   }, [label]);
   const textShadow = title.glow
-    ? { textShadowColor: title.glow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 18 }
+    ? { textShadowColor: title.glow, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: GLOW_RADIUS }
     : { textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 0 };
 
   return (
@@ -80,6 +84,6 @@ const styles = StyleSheet.create({
   block: { alignItems: 'center', paddingHorizontal: 16 },
   words: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 14 },
   word: { flexDirection: 'row' },
-  letter: { fontSize: 42, fontWeight: '900', letterSpacing: 1.5 },
+  letter: { fontSize: 42, fontWeight: '900', letterSpacing: 1.5, backgroundColor: 'transparent', padding: GLOW_ROOM, margin: -GLOW_ROOM },
   name: { marginTop: 6, color: INK, fontSize: 13, fontWeight: '700', letterSpacing: 2.6, textTransform: 'uppercase', textAlign: 'center' },
 });
