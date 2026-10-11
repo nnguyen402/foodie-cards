@@ -48,6 +48,8 @@ If only two feature teammates are available, assign B and C first. A retains int
 
 ## Agent workflow
 
+UI teammates should update their branches from main and follow [the shared mobile UI foundation](ui-foundation.md). React Native Reusables, styling configuration, and shared controls are configured once by the integrator. B+C and D use those controls rather than independently initializing or replacing the styling stack. Keep Task A backend work in its separate PR.
+
 - Each teammate uses a separate checkout or worktree and a lane branch.
 - Each teammate's main agent coordinates their subagents and reviews the combined result.
 - Give subagents explicit file ownership, expected inputs/outputs, and verification requirements. Avoid concurrent edits to the same files.
