@@ -3,7 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 import { buildCollection, RESTAURANT_SELECT, type Collection, type RestaurantRow, type ReviewRow } from './collection';
-import { shouldStore } from './loadState';
+import { createRequestTracker, shouldStore } from './loadState';
 import { CARD_SELECT, type CardRow } from './mapCard';
 
 export type CollectionState =
@@ -14,23 +14,24 @@ export type CollectionState =
 // Tagged with the user it was fetched for so another account never sees it.
 type Stored = { userId: string; state: CollectionState };
 
-export function useCollection(): { state: CollectionState; refreshing: boolean; refresh: () => Promise<void> } {
+export function useCollection(): { state: CollectionState; refreshing: boolean; refreshFailed: boolean; refresh: () => Promise<void> } {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
   const [stored, setStored] = useState<Stored | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [failure, setFailure] = useState<{ userId: string; failed: boolean }>({ userId: '', failed: false });
   const current = stored?.userId === userId ? stored.state : null;
-  const latestRequest = useRef(0);
-  const userRef = useRef(userId);
-  userRef.current = userId;
+  const tracker = useRef(createRequestTracker(userId));
+  tracker.current.reset(userId);
   const storedRef = useRef<Stored | null>(null);
 
   const load = useCallback(async (isActive: () => boolean = () => true) => {
     if (!supabase || !userId) return;
-    const request = ++latestRequest.current;
+    const request = tracker.current.next();
     const publish = (incoming: CollectionState) => {
       const previous = storedRef.current?.userId === userId ? storedRef.current.state : null;
-      const isLatest = isActive() && request === latestRequest.current && userRef.current === userId;
+      const isLatest = isActive() && tracker.current.isLatest(request);
+      if (isLatest) setFailure({ userId, failed: incoming.status === 'error' && previous?.status === 'ready' });
       if (!shouldStore({ isLatest, previous, incoming })) return;
       storedRef.current = { userId, state: incoming };
       setStored(storedRef.current);
@@ -70,5 +71,6 @@ export function useCollection(): { state: CollectionState; refreshing: boolean; 
     }
   }, [load]);
 
-  return { state: current ?? { status: 'loading' }, refreshing, refresh };
+  const refreshFailed = failure.userId === userId && failure.failed && current?.status === 'ready';
+  return { state: current ?? { status: 'loading' }, refreshing, refreshFailed, refresh };
 }

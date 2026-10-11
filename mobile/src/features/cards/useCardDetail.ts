@@ -3,7 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
 import { buildCardDetail, type CardDetail, type DetailReviewRow, type DishRow, type VisitRow } from './detail';
-import { shouldStore } from './loadState';
+import { createRequestTracker, shouldStore } from './loadState';
 import { CARD_SELECT, type CardRow } from './mapCard';
 
 export type CardDetailState =
@@ -19,17 +19,16 @@ export function useCardDetail(cardId: string): { state: CardDetailState; refresh
   const userId = session?.user.id ?? '';
   const [stored, setStored] = useState<Stored | null>(null);
   const current = cardId === '' ? { status: 'not-found' as const } : stored?.userId === userId && stored.cardId === cardId ? stored.state : null;
-  const latestRequest = useRef(0);
-  const keyRef = useRef(`${userId}/${cardId}`);
-  keyRef.current = `${userId}/${cardId}`;
+  const tracker = useRef(createRequestTracker(`${userId}/${cardId}`));
+  tracker.current.reset(`${userId}/${cardId}`);
   const storedRef = useRef<Stored | null>(null);
 
   const load = useCallback(async (isActive: () => boolean = () => true) => {
     if (!supabase || !userId || !cardId) return;
-    const request = ++latestRequest.current;
+    const request = tracker.current.next();
     const publish = (incoming: CardDetailState) => {
       const previous = storedRef.current?.userId === userId && storedRef.current.cardId === cardId ? storedRef.current.state : null;
-      const isLatest = isActive() && request === latestRequest.current && keyRef.current === `${userId}/${cardId}`;
+      const isLatest = isActive() && tracker.current.isLatest(request);
       if (!shouldStore({ isLatest, previous, incoming })) return;
       storedRef.current = { userId, cardId, state: incoming };
       setStored(storedRef.current);

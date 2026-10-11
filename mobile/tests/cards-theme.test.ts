@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cuisineIcon, ratingLabel, readableTextOn } from '../src/features/cards/themes';
+import { cuisineIcon, ratingLabel, ratingSpoken, readableTextOn } from '../src/features/cards/themes';
 
 describe('card theme helpers', () => {
   it('puts light text on a dark restaurant colour', () => {
@@ -33,5 +33,14 @@ describe('card theme helpers', () => {
     expect(ratingLabel(0)).toBe('★ 0');
     expect(ratingLabel(4.5)).toBe('★ 4.5');
     expect(ratingLabel(null)).toBe('Unrated');
+  });
+});
+
+describe('ratingSpoken', () => {
+  it('reads ratings naturally for screen readers', () => {
+    expect(ratingSpoken(null)).toBe('unrated');
+    expect(ratingSpoken(1)).toBe('rated 1 star');
+    expect(ratingSpoken(4.5)).toBe('rated 4.5 stars');
+    expect(ratingSpoken(0)).toBe('rated 0 stars');
   });
 });

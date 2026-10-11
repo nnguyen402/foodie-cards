@@ -7,7 +7,7 @@ import { nameFont } from './fonts';
 import { frameRects, type WindowRect } from './frameLayout';
 import { describeProgress } from './progress';
 import { stageLabel } from './stageStyles';
-import { cardInk, cuisineIcon, ratingLabel, readableTextOn } from './themes';
+import { cardInk, cuisineIcon, ratingLabel, ratingSpoken, readableTextOn } from './themes';
 import type { CardView } from './types';
 
 // Below this width the card is a collection thumbnail and shows only the essentials.
@@ -47,7 +47,7 @@ export function RestaurantCard({ card, width, heroSource, style }: RestaurantCar
     <View
       accessible
       accessibilityRole="image"
-      accessibilityLabel={`${restaurant.name}, ${label} card, ${card.cardXP} XP, ${visits}, ${card.rating === null ? 'unrated' : `rated ${card.rating} stars`}`}
+      accessibilityLabel={`${restaurant.name}, ${label} card, ${card.cardXP} XP, ${visits}, ${ratingSpoken(card.rating)}`}
       style={[{ width, height: rects.height }, style]}
     >
       <CardFrame stage={card.stage} rects={rects} />

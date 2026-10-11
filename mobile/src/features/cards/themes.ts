@@ -30,3 +30,9 @@ export function cuisineIcon(category: string): CuisineIconKind {
 export function ratingLabel(rating: number | null): string {
   return rating === null ? 'Unrated' : `★ ${rating}`;
 }
+
+// Spoken form for screen-reader labels: "rated 1 star", "rated 4.5 stars", "unrated".
+export function ratingSpoken(rating: number | null): string {
+  if (rating === null) return 'unrated';
+  return `rated ${rating} ${rating === 1 ? 'star' : 'stars'}`;
+}

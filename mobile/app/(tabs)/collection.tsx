@@ -10,7 +10,9 @@ import { LockedCard } from '@/features/cards/LockedCard';
 import { RestaurantCard } from '@/features/cards/RestaurantCard';
 import { SortControl } from '@/features/cards/SortControl';
 import { sortCards, type CollectionSort } from '@/features/cards/sorting';
+import { usePendingReveal } from '@/features/cards/reveal/usePendingReveal';
 import { stageLabel } from '@/features/cards/stageStyles';
+import { ratingSpoken } from '@/features/cards/themes';
 import type { CardView } from '@/features/cards/types';
 import { useCollection } from '@/features/cards/useCollection';
 import { checkBackendHealth } from '@/lib/api';
@@ -34,7 +36,7 @@ function OwnedCard({ card, width, onOpen }: { card: CardView; width: number; onO
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${card.restaurant.name}, ${stageLabel(card.stage)} card, ${card.rating === null ? 'unrated' : `rated ${card.rating} stars`}. Opens card details.`}
+      accessibilityLabel={`${card.restaurant.name}, ${stageLabel(card.stage)} card, ${ratingSpoken(card.rating)}. Opens card details.`}
       onPress={onOpen}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
@@ -54,11 +56,12 @@ function OwnedCard({ card, width, onOpen }: { card: CardView; width: number; onO
 export default function CollectionScreen() {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
-  const { state, refreshing, refresh } = useCollection();
+  const { state, refreshing, refreshFailed, refresh } = useCollection();
+  const { eventId: pendingEventId } = usePendingReveal();
   const [sort, setSort] = useState<CollectionSort>('recent');
   const [offline, setOffline] = useState(false);
   const [healthError, setHealthError] = useState<string | null>(null);
-  const cardWidth = Math.min(MAX_CARD_WIDTH, Math.floor((windowWidth - 2 * spacing.page - GRID_GAP) / 2));
+  const cardWidth = Math.max(0, Math.min(MAX_CARD_WIDTH, Math.floor((windowWidth - 2 * spacing.page - GRID_GAP) / 2)));
 
   const checkHealth = useCallback(async () => {
     setOffline(false);
@@ -97,9 +100,9 @@ export default function CollectionScreen() {
             <>
               {owned.length >= 2 ? <SortControl value={sort} onChange={setSort} /> : null}
               <View style={styles.grid}>
-                {sortedOwned.map((card) => (
+                {cardWidth > 0 ? sortedOwned.map((card) => (
                   <OwnedCard key={card.id} card={card} width={cardWidth} onOpen={() => router.push(`/card/${card.id}`)} />
-                ))}
+                )) : null}
               </View>
             </>
           )}
@@ -108,7 +111,7 @@ export default function CollectionScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeading}><AppText variant="heading" strong>Still to discover</AppText><AppText variant="small" muted>{locked.length}</AppText></View>
             <View style={styles.grid}>
-              {locked.map((restaurant) => <LockedCard key={restaurant.id} restaurant={restaurant} width={cardWidth} />)}
+              {cardWidth > 0 ? locked.map((restaurant) => <LockedCard key={restaurant.id} restaurant={restaurant} width={cardWidth} />) : null}
             </View>
           </View>
         ) : null}
@@ -135,6 +138,13 @@ export default function CollectionScreen() {
           <Button label="Retry" variant="quiet" fullWidth={false} onPress={() => void checkHealth()} />
         </View>
       ) : null}
+      {pendingEventId ? (
+        <View style={styles.reveal}>
+          <AppText strong style={styles.revealText}>You have a card to reveal</AppText>
+          <Button label="Open" fullWidth={false} onPress={() => router.push(`/reveal/${pendingEventId}`)} />
+        </View>
+      ) : null}
+      {refreshFailed ? <AppText variant="small" style={styles.refreshError} accessibilityRole="alert">Couldn’t refresh. Pull to try again.</AppText> : null}
       {content}
     </ScrollView>
   );
@@ -146,6 +156,9 @@ const styles = StyleSheet.create({
   health: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, backgroundColor: colors.surface },
   healthDot: { height: 9, width: 9, borderRadius: 6, backgroundColor: colors.error },
   healthText: { flex: 1, gap: spacing.xs },
+  reveal: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.control, backgroundColor: colors.accentSoft },
+  revealText: { flex: 1 },
+  refreshError: { color: colors.error },
   section: { gap: spacing.md },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
