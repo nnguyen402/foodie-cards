@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Redirect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { profileEditRequestSchema, type Profile } from '@foodie-cards/shared';
 import type { Session } from '@supabase/supabase-js';
 import { AppText } from '@/components/ui/app-text';
@@ -9,21 +9,24 @@ import { FormField } from '@/components/ui/form-field';
 import { MessagePanel } from '@/components/ui/message-panel';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
+import { PrivateRouteGuard } from '../auth/PrivateRouteGuard';
 import { colors, radius, spacing } from '@/theme/tokens';
 import { avatarKeys, avatarLabels } from './avatars';
 import { profileColumnUpdate } from './save-profile';
 
 export function EditProfileScreen() {
-  const { profile, session, status } = useAuth();
-  if (status === 'loading') {
+  return <PrivateRouteGuard><EditProfileContent /></PrivateRouteGuard>;
+}
+
+function EditProfileContent() {
+  const { profile, session, refreshProfile } = useAuth();
+  if (!profile || !session) {
     return (
       <View style={styles.centered}>
-        <MessagePanel title="Loading your profile" body="Your account details are private." loading />
+        <MessagePanel title="Profile unavailable" body="Your account details could not be loaded." kind="error" actionLabel="Retry" onAction={() => void refreshProfile()} />
       </View>
     );
   }
-  if (status === 'misconfigured') return <Redirect href="/" />;
-  if (!profile || !session || status === 'signed-out') return <Redirect href="/(auth)/sign-in" />;
   return <EditProfileForm profile={profile} session={session} />;
 }
 

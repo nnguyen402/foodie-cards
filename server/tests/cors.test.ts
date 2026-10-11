@@ -24,6 +24,20 @@ describe('browser CORS policy', () => {
     expect(response.headers['access-control-allow-credentials']).toBeUndefined();
   });
 
+  it('allows the authenticated JSON PATCH preflight used by review submissions', async () => {
+    const response = await request(appWithCorsOrigins('http://localhost:8082'))
+      .options('/api/reviews/10000000-0000-4000-8000-000000000001')
+      .set('Origin', 'http://localhost:8082')
+      .set('Access-Control-Request-Method', 'PATCH')
+      .set('Access-Control-Request-Headers', 'authorization,content-type')
+      .expect(204);
+
+    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:8082');
+    expect(response.headers['access-control-allow-methods']).toContain('PATCH');
+    expect(response.headers['access-control-allow-headers'].toLowerCase()).toContain('authorization');
+    expect(response.headers['access-control-allow-headers'].toLowerCase()).toContain('content-type');
+  });
+
   it('adds CORS headers to health and authenticated-route errors for an allowed origin', async () => {
     const app = appWithCorsOrigins('http://localhost:8082');
     const health = await request(app).get('/health').set('Origin', 'http://localhost:8082').expect(200);

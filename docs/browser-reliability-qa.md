@@ -34,4 +34,23 @@ The receipt copies and real extraction drafts remain in the local QA environment
 
 ## Remaining work
 
-Physical-phone camera/location/haptics and hosted deployment were not reverified here. Gemini fields remain editable; matching displayed totals does not establish perfect extraction of every field. Review/profile editors, pins, titles, badges, sharing, and the complete reward breakdown remain separate planned UI work.
+Physical-phone camera/location/haptics and hosted deployment were not reverified here. Gemini fields remain editable; matching displayed totals does not establish perfect extraction of every field. The initial verification above preceded Lane D; review/profile editors, pins, titles, and badges are now present. Sharing, favorite-order selection/persistence, deep-link return after sign-in, and the complete reward breakdown remain pending.
+
+## Lane D integration follow-up
+
+Merged the updated main (PR #5) into the browser reliability branch, preserving both the private card guard and the review editor. Pushed the integration as `2c73aee`, then pulled main back into the working branch.
+
+Browser checks use only the synthetic local Browser QA account:
+
+- Saved a written review with a zero-star rating; the card and profile history display zero rather than unrated. Updated it to 4.5 stars successfully.
+- The first written review awarded First Impressions and exactly 50 account XP: 750 became 800, reaching level 5 and unlocking Ultra Foodie. Editing the review retained 800 XP.
+- Changed the display name and selected Taco; the updated identity appeared on the profile.
+- Saved two owned cards in pin slots 1 and 2 and reloaded the customization page successfully.
+- Reproduced title-save loss of unsaved pin rearrangements and profile-save navigation returning to Map. Both stemmed from clearing the authenticated profile during a refresh, unmounting screens/navigation.
+- Added regression coverage for review PATCH preflights and edit/customize profile-error routing.
+- After the refresh fix, saving a title preserved the unsaved swapped pins; saving those pins persisted the new order. Profile editing returned to the Profile tab with the new name, Taco avatar, Ultra Foodie title, review history, and unchanged 800 account XP.
+- A latest-session check rejects delayed refresh callbacks from a previous account before they can change the active session scope. Initial loading and profile-error retries still hide profile data until loaded.
+
+The combined follow-up suite passes 336 tests across 39 files. Full shared/server/mobile typechecking passes. Independent Luna review and browser reload confirmed the profile, title, pin order, and review persisted.
+
+The remaining functionality gaps above are separate planned work, not evidence that every PRD feature is complete.

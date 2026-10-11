@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Redirect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import type { Profile, ProfilePinsResponse } from '@foodie-cards/shared';
 import type { Session } from '@supabase/supabase-js';
 import { AppText } from '@/components/ui/app-text';
 import { Button } from '@/components/ui/button';
 import { MessagePanel } from '@/components/ui/message-panel';
 import { useAuth } from '@/providers/auth-provider';
+import { PrivateRouteGuard } from '../auth/PrivateRouteGuard';
 import { colors, radius, spacing } from '@/theme/tokens';
 import type { ProfileAward, ProfileBoard } from './board';
 import {
@@ -21,16 +22,18 @@ import { equipProfileTitle, saveProfilePins } from './profile-actions-api';
 import { useProfileBoard } from './use-profile-board';
 
 export function CustomizeProfileScreen() {
-  const { profile, session, status } = useAuth();
-  if (status === 'loading') {
+  return <PrivateRouteGuard><CustomizeProfileContent /></PrivateRouteGuard>;
+}
+
+function CustomizeProfileContent() {
+  const { profile, session, refreshProfile } = useAuth();
+  if (!profile || !session) {
     return (
       <View style={styles.centered}>
-        <MessagePanel title="Loading profile options" body="Checking your unlocked titles and cards." loading />
+        <MessagePanel title="Profile options unavailable" body="Your account details could not be loaded." kind="error" actionLabel="Retry" onAction={() => void refreshProfile()} />
       </View>
     );
   }
-  if (status === 'misconfigured') return <Redirect href="/" />;
-  if (!profile || !session || status === 'signed-out') return <Redirect href="/(auth)/sign-in" />;
   return <CustomizationLoader profile={profile} session={session} />;
 }
 
