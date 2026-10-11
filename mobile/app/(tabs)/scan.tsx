@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { File } from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { BrandHeader } from '@/components/brand-header';
 import { AppText } from '@/components/ui/app-text';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,9 @@ import { createReceiptApi, type ReceiptImageUpload } from '@/features/receipts/r
 import { nativeReceiptPart, prepareWebReceiptBlob } from '@/features/receipts/receipt-image';
 import { createReceiptFlowState } from '@/features/receipts/receipt-state';
 
+// The Scan tab's picture. Not tied to any restaurant or brand.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const SCAN_BACKGROUND = require('../../assets/backgrounds/scan.jpg');
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_IMAGE_EDGE = 2048;
 
@@ -66,6 +70,13 @@ export default function ScanScreen() {
 function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
   const { status, session } = auth;
   const unlockTarget = parseUnlockParams(useLocalSearchParams());
+  // The picture is dark at the top, so the status bar goes light while this tab is showing. Tabs stay
+  // mounted, so it is only rendered when focused and drops back to default on other tabs.
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    return () => setFocused(false);
+  }, []));
   const flow = useRef(createReceiptFlowState());
   const userId = session?.user.id ?? null;
   flow.current.transitionTo(userId);
@@ -169,8 +180,14 @@ function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
   }
 
   return (
+    <View style={styles.root}>
+      {focused ? <StatusBar style="light" /> : null}
+      <Image source={SCAN_BACKGROUND} resizeMode="cover" style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.dim]} />
     <ScrollView contentInsetAdjustmentBehavior="automatic" style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <BrandHeader eyebrow="Add a visit" title="Scan a receipt" subtitle="Review every detail before a visit is added to your collection." />
+      <View style={styles.headerCard}>
+        <BrandHeader eyebrow="Add a visit" title="Scan a receipt" subtitle="Review every detail before a visit is added to your collection." />
+      </View>
       {unlockTarget ? <UnlockBanner target={unlockTarget} /> : null}
       {error ? <MessagePanel title="Receipt not ready" body={error} kind="error" /> : null}
       {status !== 'signed-in' || !session ? (
@@ -194,11 +211,15 @@ function ScanScreenContent({ auth }: { auth: ReturnType<typeof useAuth> }) {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.canvas },
+  root: { flex: 1, backgroundColor: '#2a0d0f' },
+  dim: { backgroundColor: 'rgba(18,8,8,0.28)' },
+  headerCard: { padding: spacing.lg, borderRadius: radius.card, backgroundColor: 'rgba(251,247,241,0.94)' },
+  screen: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: spacing.page, paddingBottom: spacing.xxl, gap: spacing.xl },
   panel: { padding: spacing.xl, gap: spacing.md, backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border },
   mark: { height: 52, width: 52, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: colors.accentSoft },
